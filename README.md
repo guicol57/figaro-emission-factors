@@ -13,8 +13,8 @@ Maintained by [Ecodex](https://getecodex.com), where the factors are published w
 
 ## What you get
 
-`results/figaro_emission_factors_26ed.csv`: 18,834 rows, one per year (2014 to 2023), country and
-NACE Rev. 2 industry (A64 level).
+`results/figaro_emission_factors_26ed.csv`: 20,541 rows, one per year, country and NACE Rev. 2
+industry (A64 level): 2014 to 2023 complete, 2024 provisional with scopes 1 + 2 only.
 
 | Column | Meaning |
 |---|---|
@@ -62,7 +62,7 @@ As available in Ecodex in October 2026.
 
 | Database | Countries | Sectors | Years | Price basis | Method in one line |
 |---|---|---|---|---|---|
-| **FIGARO** (this repository) | 31 European | 62 industries | 2014-2023, yearly | Basic | Eurostat inter-country tables and emission accounts |
+| **FIGARO** (this repository) | 31 European | 62 industries | 2014-2023, yearly (2024: scopes 1 + 2) | Basic | Eurostat inter-country tables and emission accounts |
 | CEDA (Watershed) | 149 | 400 sectors | 2021-2024 | Purchaser | Global model, one emission base year reindexed by year |
 | EXIOBASE v3.8.2 | 48 countries and regions | 184 products | 2019 | Basic | Global multi-regional model, academic consortium |
 | EPA Supply Chain v1.4 | United States | 1,016 commodities | 2024 USD | Purchaser | USEEIO national model |
@@ -124,10 +124,19 @@ are logged in `data/SOURCES.csv`.
 ### Editions
 
 Tables: 2026 edition (June 2026). Emissions: Eurostat release of January 2026, which stops at
-2023; **2023 is therefore the latest year**. European air emissions accounts do not depend on
+2023; **2023 is therefore the latest complete year**. European air emissions accounts do not depend on
 the FIGARO edition; the non-EU estimates were allocated by Eurostat with the 2025 edition. Moving
 the tables from the 2025 to the 2026 edition changes the 2022-2023 European factors by a median
 of +0.3%, with 56% of them within 5% and 9% beyond 20% (national accounts revisions).
+
+### Provisional year 2024
+
+The world emission accounts stop at 2023, so the total and scope 3 upstream cannot be computed
+for 2024. Scopes 1 + 2 can: the air emissions accounts of the EU27 and Norway for 2024 were
+published in August 2026 (`env_ac_ainah_r2`), and the 2024 table exists. Scope 1 is accounts /
+FIGARO output; scope 2 uses the 2024 direct intensity of the electricity, gas and steam suppliers,
+with the 2023 intensity for suppliers outside these 28 countries (0.7% of scopes 1 + 2 in median).
+The 2024 rows will be replaced by complete ones when Eurostat releases the next emission accounts.
 
 ## Checks
 

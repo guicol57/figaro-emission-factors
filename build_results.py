@@ -9,6 +9,9 @@ Selection rules
 - 31 European countries: EU27, Norway, Switzerland, United Kingdom, Turkey;
 - industries T (households as employers, no inputs) and U (no output) are left out;
 - rows with an output below 50 million EUR are left out (unstable ratios on tiny industries).
+
+The last year is provisional: scopes 1 + 2 only (total and scope 3 upstream are empty), for the
+countries whose air emissions accounts are already published.
 """
 import sys
 from pathlib import Path
@@ -23,7 +26,7 @@ EXCLUDED_SECTORS = {"T", "U"}
 fac = pd.read_csv(HERE / "results" / EDITION / f"figaro_factors_{EDITION}.csv")
 geo = pd.read_csv(HERE / "data" / "countries.csv").set_index("code")
 nace = pd.read_csv(HERE / "data" / "nace_a64.csv").set_index("code")
-f = fac[fac.geo.isin(geo.index) & (fac.output_meur >= MIN_OUTPUT_MEUR) & (fac.total > 0)
+f = fac[fac.geo.isin(geo.index) & (fac.output_meur >= MIN_OUTPUT_MEUR) & ((fac.total > 0) | fac.total.isna())
         & ~fac.sector.isin(EXCLUDED_SECTORS)].copy()
 
 s12 = f.scope1 + f.scope2
@@ -46,7 +49,9 @@ out[value_cols] = out[value_cols].clip(lower=0).round(2)
 share_cols = [c for c in out.columns if "share" in c]
 out[share_cols] = out[share_cols].clip(0, 1).round(3)
 assert not out.duplicated(["year", "country_code", "nace_code"]).any()
-assert (out.total_co2 <= out.total_scopes_1_2_3_upstream + 0.01).all()
+full = out.total_scopes_1_2_3_upstream.notna()
+assert (out.total_co2[full] <= out.total_scopes_1_2_3_upstream[full] + 0.01).all()
+assert (out.scopes_1_2 > 0).all()
 path = HERE / "results" / f"figaro_emission_factors_{EDITION}.csv"
 out.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
 print(path.name, len(out), "rows |", out.country_code.nunique(), "countries |", out.nace_code.nunique(),

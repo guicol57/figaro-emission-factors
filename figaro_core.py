@@ -91,6 +91,15 @@ EU27 = {"AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", 
         "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK"}
 
 
+def load_aea(path: str, year: int) -> pd.Series:
+    """Air emissions accounts (kt) by (region, A64 sector) for one year, from an env_ac_ainah_r2 extract."""
+    df = pd.read_csv(path, dtype={"time": int})
+    df = df[df.time == year].copy()
+    df["geo"] = df.geo.replace(GEO_MAP)
+    df["sector"] = df.nace_r2.replace(NACE_MAP)
+    return df.groupby(["geo", "sector"]).value.first()
+
+
 def leontief(z: pd.DataFrame, x: pd.Series, e: pd.Series, e_co2: pd.Series | None = None) -> pd.DataFrame:
     """Total, scope 1, scope 2 and scope 3 upstream intensities (kgCO2e/EUR), with
     - the CO2-only part of each (when e_co2 is given),

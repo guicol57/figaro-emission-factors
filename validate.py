@@ -29,7 +29,8 @@ OUT = HERE / "results" / EDITION
 VAL = OUT / "validation"
 VAL.mkdir(exist_ok=True)
 fac = pd.read_csv(OUT / f"figaro_factors_{EDITION}.csv").set_index(["year", "geo", "sector"])
-years = sorted(fac.index.get_level_values("year").unique())
+provisional = set(fac[fac.total.isna()].index.get_level_values("year"))   # scopes 1 + 2 only
+years = sorted(set(fac.index.get_level_values("year")) - provisional)
 report = [f"# FIGARO factors ({EDITION}) - validation report", ""]
 
 

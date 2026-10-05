@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from figaro_core import leontief, load_emissions, load_iot
+from figaro_core import leontief, load_aea, load_emissions, load_iot
 
 HERE = Path(__file__).parent
 
@@ -33,6 +33,8 @@ if __name__ == "__main__":
     ap.add_argument("--figaro-dir", required=True)
     ap.add_argument("--years", nargs="+", type=int, default=list(range(2014, 2024)))
     ap.add_argument("--edition", default="26ed")
+    ap.add_argument("--provisional-year", type=int, default=2024,
+                    help="year after the last one: scopes 1 + 2 only, from the air emissions accounts")
     a = ap.parse_args()
     out = HERE / "results" / a.edition
     out.mkdir(parents=True, exist_ok=True)
@@ -54,4 +56,32 @@ if __name__ == "__main__":
         res.insert(0, "year", year)
         frames.append(res.reset_index())
         print(year, path.name, f"world emissions {res.emissions_kt.sum()/1e6:.2f} Gt, identity ok")
+    # Provisional year: world emission accounts are not published yet, so the total and scope 3 upstream
+    # cannot be computed. Scopes 1 + 2 can: the air emissions accounts of European countries are already
+    # available. Regions and industries without accounts keep their intensity of the previous year (they
+    # only enter scope 2 through electricity, gas and steam bought from them).
+    py = a.provisional_year
+    try:
+        path, flat = find_table(Path(a.figaro_dir), py, a.edition) if py else (None, None)
+    except FileNotFoundError:
+        path = None
+    if path is not None and frames and int(frames[-1].year.iloc[0]) == py - 1:
+        prev = frames[-1].set_index(["geo", "sector"])
+        z, x, _ = load_iot(str(path), flat)
+        prev = prev.reindex(z.index)
+        e, e_co2 = [(prev[col].fillna(0.0) / 1000.0 * x) for col in ("scope1", "scope1_co2")]
+        observed = pd.Series(False, index=z.index)
+        for vec, name in ((e, "env_ac_ainah_r2_ghg.csv"), (e_co2, "env_ac_ainah_r2_co2.csv")):
+            aea = load_aea(str(HERE / "data" / name), py).reindex(z.index)
+            vec[aea.notna()] = aea[aea.notna()]
+            if vec is e:
+                observed = aea.notna()
+        res = leontief(z, x, e, e_co2)
+        for c in res.columns.drop(["output_meur", "emissions_kt"]):
+            res[c] *= 1000.0
+        res[["scope3_upstream", "total", "total_co2", "total_dom", "total_eu"]] = float("nan")
+        res = res[observed.to_numpy()]            # only rows whose scope 1 comes from published accounts
+        res.insert(0, "year", py)
+        frames.append(res.reset_index())
+        print(py, path.name, f"provisional, scopes 1 + 2 only, {len(res)} rows with published accounts")
     pd.concat(frames).to_csv(out / f"figaro_factors_{a.edition}.csv", index=False)

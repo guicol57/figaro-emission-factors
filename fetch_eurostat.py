@@ -28,6 +28,8 @@ EXTRACTS = {
     "env_ac_ghgfp_footprint_by_dest": ("env_ac_ghgfp?c_orig=WORLD&nace_r2=TOTAL&na_item=TOTAL&sinceTimePeriod=2014", ["c_dest", "time"]),
     # official air emissions accounts and national-accounts output (validation 2, scope 1)
     "env_ac_ainah_r2_ghg": ("env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=2014", ["geo", "nace_r2", "time"]),
+    # CO2 alone, used for the provisional year (scopes 1 + 2 only)
+    "env_ac_ainah_r2_co2": ("env_ac_ainah_r2?airpol=CO2&unit=THS_T&sinceTimePeriod=2023", ["geo", "nace_r2", "time"]),
     "nama_10_a64_p1": ("nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2014", ["geo", "nace_r2", "time"]),
     # French national symmetric input-output table, domestic and imports (validation 3, SNAC)
     "naio_10_cp1700_FR": ("naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2014", ["stk_flow", "prd_ava", "prd_use", "time"]),
@@ -42,6 +44,7 @@ TABLES_26ED = {
     2018: "40c2349e-1ba7-48b5-b4a3-4f00b78f2283", 2019: "ba9d7f3a-a381-49f2-998d-64fec81c3d35",
     2020: "28d77fbf-50c2-475c-8ba6-c97b02a69039", 2021: "57fd3555-51db-4f03-b765-3cb7fcfe3007",
     2022: "f1330ee5-2841-4f3a-949c-20f36d068714", 2023: "836a0346-bdb5-4d8a-bbea-b3bd583a53c9",
+    2024: "8ac7da34-911e-4a91-ab1c-8aec1a574381",
 }
 
 

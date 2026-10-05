@@ -14,8 +14,8 @@ maintenu par [Ecodex](https://getecodex.com), qui publie ces facteurs au sein de
 
 ## Contenu
 
-`results/figaro_emission_factors_26ed.csv` : 18 834 lignes, une par année (2014 à 2023), pays et
-branche NACE Rév. 2 (niveau A64).
+`results/figaro_emission_factors_26ed.csv` : 20 541 lignes, une par année, pays et branche NACE
+Rév. 2 (niveau A64) : 2014 à 2023 complètes, 2024 provisoire avec les scopes 1 + 2 seulement.
 
 | Colonne | Signification |
 |---|---|
@@ -64,7 +64,7 @@ Telles que disponibles dans Ecodex en octobre 2026.
 
 | Base | Pays | Secteurs | Années | Base de prix | Méthode en une ligne |
 |---|---|---|---|---|---|
-| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2014-2023, annuel | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
+| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2014-2023, annuel (2024 : scopes 1 + 2) | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
 | CEDA (Watershed) | 149 | 400 secteurs | 2021-2024 | Prix d'achat | Modèle mondial, une année de base d'émissions réindexée par année |
 | EXIOBASE v3.8.2 | 48 pays et régions | 184 produits | 2019 | Prix de base | Modèle multirégional mondial, consortium académique |
 | EPA Supply Chain v1.4 | États-Unis | 1 016 produits | USD 2024 | Prix d'achat | Modèle national USEEIO |
@@ -129,11 +129,21 @@ dates de mise à jour Eurostat de chaque extrait sont consignées dans `data/SOU
 ### Éditions
 
 Tableaux : édition 2026 (juin 2026). Émissions : publication Eurostat de janvier 2026, qui s'arrête
-à 2023 ; **2023 est donc la dernière année**. Les comptes d'émissions dans l'air européens ne
+à 2023 ; **2023 est donc la dernière année complète**. Les comptes d'émissions dans l'air européens ne
 dépendent pas de l'édition de FIGARO ; les estimations hors UE ont été ventilées par Eurostat avec
 l'édition 2025. Le passage des tableaux de l'édition 2025 à l'édition 2026 modifie les facteurs
 européens 2022-2023 de +0,3 % en médiane, 56 % d'entre eux restant à 5 % près et 9 % bougeant de
 plus de 20 % (révisions des comptes nationaux).
+
+### Année provisoire 2024
+
+Les comptes d'émissions mondiaux s'arrêtent à 2023 : le total et le scope 3 amont ne peuvent pas
+être calculés pour 2024. Les scopes 1 + 2 le peuvent : les comptes d'émissions dans l'air 2024 de
+l'UE27 et de la Norvège ont été publiés en août 2026 (`env_ac_ainah_r2`) et le tableau 2024 existe.
+Le scope 1 vaut comptes / production FIGARO ; le scope 2 utilise l'intensité directe 2024 des
+fournisseurs d'électricité, de gaz et de vapeur, et l'intensité 2023 pour les fournisseurs situés
+hors de ces 28 pays (0,7 % des scopes 1 + 2 en médiane). Les lignes 2024 seront remplacées par des
+lignes complètes à la prochaine publication des comptes d'émissions par Eurostat.
 
 ## Contrôles
 
