@@ -1,0 +1,6 @@
+__pycache__/
+tables/
+# intermediate outputs, rebuilt by build_factors.py
+results/*/figaro_factors_*.csv
+results/*/final_demand_*.csv
+results/*/import_mix_*.csv
