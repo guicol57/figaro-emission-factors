@@ -1,5 +1,7 @@
 # FIGARO monetary emission factors
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23157020.svg)](https://doi.org/10.5281/zenodo.23157020)
+
 Spend-based greenhouse gas emission factors for 31 European countries and 62 industries, computed
 from Eurostat's FIGARO inter-country input-output tables and the emission accounts Eurostat uses
 for its official footprints. Scopes 1, 2 and 3 upstream, in kgCO2e per thousand EUR of output.
@@ -137,4 +139,4 @@ in place: rerunning `fetch_eurostat.py` later may return revised data; the extra
 Code: MIT, see `LICENSE`. Results and documentation: CC BY 4.0, see `DATA_LICENSE.md`, which also
 lists the attribution owed to Eurostat and SDES / Insee for the inputs.
 
-To cite: see `CITATION.cff`.
+To cite: see `CITATION.cff`. Archived on Zenodo: all versions https://doi.org/10.5281/zenodo.23157020, version 2026.1 https://doi.org/10.5281/zenodo.23157021.

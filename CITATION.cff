@@ -11,3 +11,4 @@ license: CC-BY-4.0
 abstract: "Spend-based greenhouse gas emission factors (scopes 1, 2 and 3 upstream) for 31 European countries and 62 NACE industries, 2020 to 2023, computed from Eurostat FIGARO inter-country input-output tables (2026 edition) and Eurostat emission accounts."
 keywords: [emission factors, input-output, FIGARO, Eurostat, scope 3, carbon footprint]
 repository-code: "https://github.com/guicol57/figaro-emission-factors"
+doi: "10.5281/zenodo.23157020"

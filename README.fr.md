@@ -1,5 +1,7 @@
 # Facteurs d'émission monétaires FIGARO
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23157020.svg)](https://doi.org/10.5281/zenodo.23157020)
+
 Facteurs d'émission de gaz à effet de serre par euro dépensé, pour 31 pays européens et 62 branches
 d'activité, calculés à partir des tableaux entrées-sorties inter-pays FIGARO d'Eurostat et des
 comptes d'émissions qu'Eurostat utilise pour ses empreintes officielles. Scopes 1, 2 et 3 amont, en
@@ -143,4 +145,4 @@ extraits versionnés dans `data/` sont ceux des résultats publiés.
 Code : MIT, voir `LICENSE`. Résultats et documentation : CC BY 4.0, voir `DATA_LICENSE.md`, qui
 précise aussi l'attribution due à Eurostat et au SDES / Insee pour les données d'entrée.
 
-Pour citer : voir `CITATION.cff`.
+Pour citer : voir `CITATION.cff`. Archivé sur Zenodo : toutes versions https://doi.org/10.5281/zenodo.23157020, version 2026.1 https://doi.org/10.5281/zenodo.23157021.
