@@ -7,13 +7,13 @@ from Eurostat's FIGARO inter-country input-output tables and the emission accoun
 for its official footprints. Scopes 1, 2 and 3 upstream, in kgCO2e per thousand EUR of output.
 
 This repository holds the full calculation: scripts, input extracts, results and checks.
-Maintained by [Ecodex](https://getecodex.com), where the factors are published as the source "FIGARO".
+Maintained by [Ecodex](https://getecodex.com), where the factors are published within the source "Eurostat".
 
 [Version française](README.fr.md)
 
 ## What you get
 
-`results/figaro_emission_factors_26ed.csv`: 7,551 rows, one per year (2020 to 2023), country and
+`results/figaro_emission_factors_26ed.csv`: 18,834 rows, one per year (2014 to 2023), country and
 NACE Rev. 2 industry (A64 level).
 
 | Column | Meaning |
@@ -62,7 +62,7 @@ As available in Ecodex in October 2026.
 
 | Database | Countries | Sectors | Years | Price basis | Method in one line |
 |---|---|---|---|---|---|
-| **FIGARO** (this repository) | 31 European | 62 industries | 2020-2023, yearly | Basic | Eurostat inter-country tables and emission accounts |
+| **FIGARO** (this repository) | 31 European | 62 industries | 2014-2023, yearly | Basic | Eurostat inter-country tables and emission accounts |
 | CEDA (Watershed) | 149 | 400 sectors | 2021-2024 | Purchaser | Global model, one emission base year reindexed by year |
 | EXIOBASE v3.8.2 | 48 countries and regions | 184 products | 2019 | Basic | Global multi-regional model, academic consortium |
 | EPA Supply Chain v1.4 | United States | 1,016 commodities | 2024 USD | Purchaser | USEEIO national model |
@@ -137,13 +137,14 @@ Reports in `results/<edition>/validation/`.
    footprint Eurostat publishes for each country: with the 2025 edition, the one Eurostat used,
    median ratio 1.0000, 96% of the 46 regions within 1%, largest gap 2.1% (`results/25ed`). The
    2025 edition tables are no longer distributed, so this check cannot be rerun from public files;
-   with the 2026 tables the match is no longer exact (35 to 48% of regions within 1%).
-2. **Scope 1.** Emissions equal the air emissions accounts for 95 to 97% of rows; the direct
-   intensity is within 5% of accounts / national-accounts output for 96 to 99% of rows, median 1.000.
+   with the 2026 tables the match is no longer exact (35 to 52% of regions within 1%).
+2. **Scope 1.** Emissions equal the air emissions accounts for 95 to 98% of rows; the direct
+   intensity is within 5% of accounts / national-accounts output for 96 to 100% of rows depending
+   on the year, median 1.000.
 3. **France against SDES / Insee GES.501**, the values ADEME publishes as monetary ratios:
-   - these factors: median ratio 0.82 to 0.87 depending on the year;
+   - these factors: median ratio 0.82 to 0.88 depending on the year (2019 to 2023);
    - FIGARO import contents combined with the French national input-output table, which
-     approximates the method of the SDES: median 0.94 to 0.96, 70 to 79% of industries within 10%.
+     approximates the method of the SDES: median 0.94 to 0.96, 54 to 79% of industries within 10% (2019 to 2022).
 
 ### Why France is about 15% below Base Carbone
 
@@ -167,7 +168,7 @@ python validate.py                            # results/26ed/validation/
 python build_results.py                       # results/figaro_emission_factors_26ed.csv
 ```
 
-About 2 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
+About 5 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
 in place: rerunning `fetch_eurostat.py` later may return revised data; the extracts committed in
 `data/` are the ones behind the published results.
 
@@ -184,4 +185,4 @@ in place: rerunning `fetch_eurostat.py` later may return revised data; the extra
 Code: MIT, see `LICENSE`. Results and documentation: CC BY 4.0, see `DATA_LICENSE.md`, which also
 lists the attribution owed to Eurostat and SDES / Insee for the inputs.
 
-To cite: see `CITATION.cff`. Archived on Zenodo: all versions https://doi.org/10.5281/zenodo.23157020, version 2026.1 https://doi.org/10.5281/zenodo.23157021.
+To cite: see `CITATION.cff`. Archived on Zenodo: all versions https://doi.org/10.5281/zenodo.23157020, one DOI per release listed on that page.

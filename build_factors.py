@@ -1,6 +1,6 @@
 """Compute FIGARO monetary emission factors (scopes 1, 2, 3 upstream) for every region x industry.
 
-    python build_factors.py --figaro-dir <folder with the FIGARO CSV files> [--years 2020 2021 2022 2023] [--edition 26ed]
+    python build_factors.py --figaro-dir <folder with the FIGARO CSV files> [--years 2014 ... 2023] [--edition 26ed]
 
 Reads the industry-by-industry inter-country IOT (matrix or flat CSV) and the direct
 emissions extract (data/env_ac_ghgfp_direct_emissions.csv). Writes, per year:
@@ -31,7 +31,7 @@ def find_table(folder: Path, year: int, EDITION: str) -> tuple[Path, bool]:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--figaro-dir", required=True)
-    ap.add_argument("--years", nargs="+", type=int, default=[2020, 2021, 2022, 2023])
+    ap.add_argument("--years", nargs="+", type=int, default=list(range(2014, 2024)))
     ap.add_argument("--edition", default="26ed")
     a = ap.parse_args()
     out = HERE / "results" / a.edition

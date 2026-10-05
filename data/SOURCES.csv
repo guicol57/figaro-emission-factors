@@ -1,7 +1,7 @@
 file,api_query,eurostat_last_update,rows
 env_ac_ghgfp_direct_emissions.csv,env_ac_ghgfp?c_dest=WORLD&na_item=TOTAL,2026-01-22T23:00:00+0100,54880
 env_ac_co2fp_direct_emissions.csv,env_ac_co2fp?c_dest=WORLD&na_item=TOTAL,2026-01-22T23:00:00+0100,54880
-env_ac_ghgfp_footprint_by_dest.csv,env_ac_ghgfp?c_orig=WORLD&nace_r2=TOTAL&na_item=TOTAL&sinceTimePeriod=2020,2026-01-22T23:00:00+0100,196
-env_ac_ainah_r2_ghg.csv,env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=2020,2026-08-07T23:00:00+0200,13599
-nama_10_a64_p1.csv,nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2020,2026-10-02T23:00:00+0200,17925
-naio_10_cp1700_FR.csv,naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2020,2026-09-30T23:00:00+0200,87326
+env_ac_ghgfp_footprint_by_dest.csv,env_ac_ghgfp?c_orig=WORLD&nace_r2=TOTAL&na_item=TOTAL&sinceTimePeriod=2014,2026-01-22T23:00:00+0100,490
+env_ac_ainah_r2_ghg.csv,env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=2014,2026-08-07T23:00:00+0200,30183
+nama_10_a64_p1.csv,nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2014,2026-10-02T23:00:00+0200,39876
+naio_10_cp1700_FR.csv,naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2014,2026-09-30T23:00:00+0200,187865

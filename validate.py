@@ -87,6 +87,8 @@ siot = pd.read_csv(DATA / "naio_10_cp1700_FR.csv")
 siot["r"] = siot.prd_ava.str.replace("CPA_", "").replace(SIOT_CODES)
 siot["c"] = siot.prd_use.str.replace("CPA_", "").replace(SIOT_CODES)
 for y in years:
+    if str(y) not in sdes.columns:      # GES.501 starts in 2019
+        continue
     f = fac.loc[y]
     fr = f.loc["FR"]
     secs = list(fr.index)

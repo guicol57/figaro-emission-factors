@@ -25,21 +25,23 @@ EXTRACTS = {
     # same for CO2 alone (CO2 / other GHG split)
     "env_ac_co2fp_direct_emissions": ("env_ac_co2fp?c_dest=WORLD&na_item=TOTAL", ["c_orig", "nace_r2", "time"]),
     # official Eurostat footprints by country of final use (validation 1)
-    "env_ac_ghgfp_footprint_by_dest": ("env_ac_ghgfp?c_orig=WORLD&nace_r2=TOTAL&na_item=TOTAL&sinceTimePeriod=2020", ["c_dest", "time"]),
+    "env_ac_ghgfp_footprint_by_dest": ("env_ac_ghgfp?c_orig=WORLD&nace_r2=TOTAL&na_item=TOTAL&sinceTimePeriod=2014", ["c_dest", "time"]),
     # official air emissions accounts and national-accounts output (validation 2, scope 1)
-    "env_ac_ainah_r2_ghg": ("env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=2020", ["geo", "nace_r2", "time"]),
-    "nama_10_a64_p1": ("nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2020", ["geo", "nace_r2", "time"]),
+    "env_ac_ainah_r2_ghg": ("env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=2014", ["geo", "nace_r2", "time"]),
+    "nama_10_a64_p1": ("nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2014", ["geo", "nace_r2", "time"]),
     # French national symmetric input-output table, domestic and imports (validation 3, SNAC)
-    "naio_10_cp1700_FR": ("naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2020", ["stk_flow", "prd_ava", "prd_use", "time"]),
+    "naio_10_cp1700_FR": ("naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2014", ["stk_flow", "prd_ava", "prd_use", "time"]),
 }
 
 
 CIRCABC = "https://circabc.europa.eu/rest/download/"
 # CIRCABC node ids of matrix_eu-ic-io_ind-by-ind_26ed_<year>.csv (folder listed 2026-10-03)
 TABLES_26ED = {
+    2014: "85d3f6de-3510-45ff-96c9-11da9f1e325a", 2015: "e989cc76-52f5-4cd9-ba8c-5764fafde13a",
+    2016: "2e7bc8e5-ee0c-4e57-a082-60a9fb59ee73", 2017: "0bd4147b-d06b-4800-87e4-c479352e88ba",
+    2018: "40c2349e-1ba7-48b5-b4a3-4f00b78f2283", 2019: "ba9d7f3a-a381-49f2-998d-64fec81c3d35",
     2020: "28d77fbf-50c2-475c-8ba6-c97b02a69039", 2021: "57fd3555-51db-4f03-b765-3cb7fcfe3007",
     2022: "f1330ee5-2841-4f3a-949c-20f36d068714", 2023: "836a0346-bdb5-4d8a-bbea-b3bd583a53c9",
-    2024: "8ac7da34-911e-4a91-ab1c-8aec1a574381",
 }
 
 

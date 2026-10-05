@@ -8,13 +8,13 @@ comptes d'émissions qu'Eurostat utilise pour ses empreintes officielles. Scopes
 kgCO2e par k€ de production.
 
 Ce dépôt contient tout le calcul : scripts, extraits de données, résultats et contrôles. Il est
-maintenu par [Ecodex](https://getecodex.com), qui publie ces facteurs sous la source « FIGARO ».
+maintenu par [Ecodex](https://getecodex.com), qui publie ces facteurs au sein de la source « Eurostat ».
 
 [English version](README.md)
 
 ## Contenu
 
-`results/figaro_emission_factors_26ed.csv` : 7 551 lignes, une par année (2020 à 2023), pays et
+`results/figaro_emission_factors_26ed.csv` : 18 834 lignes, une par année (2014 à 2023), pays et
 branche NACE Rév. 2 (niveau A64).
 
 | Colonne | Signification |
@@ -64,7 +64,7 @@ Telles que disponibles dans Ecodex en octobre 2026.
 
 | Base | Pays | Secteurs | Années | Base de prix | Méthode en une ligne |
 |---|---|---|---|---|---|
-| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2020-2023, annuel | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
+| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2014-2023, annuel | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
 | CEDA (Watershed) | 149 | 400 secteurs | 2021-2024 | Prix d'achat | Modèle mondial, une année de base d'émissions réindexée par année |
 | EXIOBASE v3.8.2 | 48 pays et régions | 184 produits | 2019 | Prix de base | Modèle multirégional mondial, consortium académique |
 | EPA Supply Chain v1.4 | États-Unis | 1 016 produits | USD 2024 | Prix d'achat | Modèle national USEEIO |
@@ -144,15 +144,15 @@ Rapports dans `results/<édition>/validation/`.
    par Eurostat, ratio médian 1,0000, 96 % des 46 régions à 1 % près, écart maximal 2,1 %
    (`results/25ed`). Les tableaux de l'édition 2025 ne sont plus distribués, ce contrôle ne peut donc
    plus être relancé à partir de fichiers publics ; avec les tableaux 2026 l'accord n'est plus exact
-   (35 à 48 % des régions à 1 % près).
-2. **Scope 1.** Les émissions sont égales aux comptes d'émissions dans l'air pour 95 à 97 % des
+   (35 à 52 % des régions à 1 % près).
+2. **Scope 1.** Les émissions sont égales aux comptes d'émissions dans l'air pour 95 à 98 % des
    lignes ; l'intensité directe est à 5 % près de comptes / production des comptes nationaux pour
-   96 à 99 % des lignes, médiane 1,000.
+   96 à 100 % des lignes selon l'année, médiane 1,000.
 3. **France, comparaison au tableau GES.501 du SDES et de l'Insee**, dont les valeurs sont celles
    que l'ADEME publie comme ratios monétaires :
-   - ces facteurs : ratio médian de 0,82 à 0,87 selon l'année ;
+   - ces facteurs : ratio médian de 0,82 à 0,88 selon l'année (2019 à 2023) ;
    - contenus importés FIGARO combinés au tableau entrées-sorties national français, ce qui
-     approche la méthode du SDES : médiane de 0,94 à 0,96, 70 à 79 % des branches à 10 % près.
+     approche la méthode du SDES : médiane de 0,94 à 0,96, 54 à 79 % des branches à 10 % près (2019 à 2022).
 
 ### Pourquoi la France est environ 15 % sous la Base Carbone
 
@@ -176,7 +176,7 @@ python validate.py                            # results/26ed/validation/
 python build_results.py                       # results/figaro_emission_factors_26ed.csv
 ```
 
-Environ 2 minutes et 4 Go de mémoire une fois les tableaux téléchargés. Eurostat écrase ses jeux de
+Environ 5 minutes et 4 Go de mémoire une fois les tableaux téléchargés. Eurostat écrase ses jeux de
 données en place : relancer `fetch_eurostat.py` plus tard peut renvoyer des données révisées ; les
 extraits versionnés dans `data/` sont ceux des résultats publiés.
 
@@ -193,4 +193,4 @@ extraits versionnés dans `data/` sont ceux des résultats publiés.
 Code : MIT, voir `LICENSE`. Résultats et documentation : CC BY 4.0, voir `DATA_LICENSE.md`, qui
 précise aussi l'attribution due à Eurostat et au SDES / Insee pour les données d'entrée.
 
-Pour citer : voir `CITATION.cff`. Archivé sur Zenodo : toutes versions https://doi.org/10.5281/zenodo.23157020, version 2026.1 https://doi.org/10.5281/zenodo.23157021.
+Pour citer : voir `CITATION.cff`. Archivé sur Zenodo : toutes versions https://doi.org/10.5281/zenodo.23157020, un DOI par version listé sur cette page.
