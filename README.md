@@ -35,14 +35,59 @@ output below 50 million EUR are left out.
 
 ## When to use these factors
 
+A spend-based factor is a fallback: a physical factor (per kg, kWh, km) or supplier-specific data
+is always better when the purchase can be described that way. When only an amount is known, the
+right database depends on what was bought and where.
+
+### Which spend-based database for which purchase
+
+| Your purchase | First choice | Why |
+|---|---|---|
+| Services, overheads or undetailed spend with a European supplier | **FIGARO** | Country-specific, recent, traceable to official statistics |
+| You need scopes 1 + 2 separated from scope 3 upstream, or the share emitted outside the EU | **FIGARO** | The only one of these databases giving both splits |
+| A specific manufactured, agricultural or chemical product, any country | **CEDA** | 400 sectors: cement, cattle or steel are not diluted in a broad industry |
+| Supplier outside Europe (Asia, Americas, Africa, Middle East) | **CEDA** | 149 countries |
+| Supplier in the United States | **EPA Supply Chain** | 1,016 commodities, national model |
+| Supplier in Canada | **OpenIO-Canada** | 13 provinces and territories, national model |
+| Supplier in Japan | **MOE Japan** | National reference |
+| France, regulatory GHG reporting | **Base Carbone** monetary ratios | National reference published by ADEME |
+| Energy products or waste treatment bought as such | **EXIOBASE** | Products detailed by fuel and by treatment route, data year 2019 |
+
+A national model, when one exists for the supplier's country, is usually the better starting
+point; FIGARO and CEDA are the two options that cover many countries with one consistent method.
+
+### How the databases differ
+
+As available in Ecodex in October 2026.
+
+| Database | Countries | Sectors | Years | Price basis | Method in one line |
+|---|---|---|---|---|---|
+| **FIGARO** (this repository) | 31 European | 62 industries | 2020-2023, yearly | Basic | Eurostat inter-country tables and emission accounts |
+| CEDA (Watershed) | 149 | 400 sectors | 2021-2024 | Purchaser | Global model, one emission base year reindexed by year |
+| EXIOBASE v3.8.2 | 48 countries and regions | 184 products | 2019 | Basic | Global multi-regional model, academic consortium |
+| EPA Supply Chain v1.4 | United States | 1,016 commodities | 2024 USD | Purchaser | USEEIO national model |
+| OpenIO-Canada | Canada, 13 provinces and territories | 472 products | 2022 | see source | National model, capital goods included |
+| Base Carbone monetary ratios | France | 56 products | 2019-2023 | Basic | FIGARO import contents with Insee national accounts (SDES) |
+| MOE Japan | Japan | about 540 items | up to 2020 | see source | National reference |
+
+Three differences explain most of the gaps between two factors for the "same" purchase:
+
+- **Price basis.** Basic prices exclude taxes on products and trade and transport margins;
+  purchaser prices include them. The same emissions divided by a larger amount give a lower factor.
+- **Sector detail.** With 62 industries, one factor pools cement with glass, or cattle with cereals.
+- **Scope of the model.** Some models include capital goods, most do not; years and emission
+  inventories differ.
+
+### Rules of thumb for FIGARO
+
 - Good fit: services and undetailed spend in a European country, when a factor traceable to
   official statistics is wanted.
-- Poor fit: a specific industrial or agricultural product. One industry out of 64 pools very
-  different activities (cement inside "other non-metallic mineral products", cattle inside
-  "agriculture"); a more detailed database or a physical factor is the right tool.
-- France: the ratios published by ADEME in Base Carbone remain the national reference. They are
-  about 15% higher than these factors, for a documented reason (see below).
+- Poor fit: a specific industrial or agricultural product (see the table above).
+- France: the Base Carbone ratios are about 15% higher than these factors, for a documented
+  reason (see Checks).
 - Purchase amounts including VAT or retail margins overstate emissions with basic-price factors.
+- Do not switch database for one spend category from one year to the next: the switch would show
+  up as a change in emissions.
 
 ## Method
 

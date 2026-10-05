@@ -36,15 +36,63 @@ production est inférieure à 50 M€ sont écartées.
 
 ## Quand utiliser ces facteurs
 
+Un facteur monétaire est une solution de repli : un facteur physique (par kg, kWh, km) ou une
+donnée propre au fournisseur est toujours préférable quand l'achat peut être décrit ainsi. Quand
+seul un montant est connu, la bonne base dépend de ce qui a été acheté et de l'endroit.
+
+### Quelle base monétaire pour quel achat
+
+| Votre achat | Premier choix | Pourquoi |
+|---|---|---|
+| Services, frais généraux ou dépenses non détaillées auprès d'un fournisseur européen | **FIGARO** | Propre à chaque pays, récent, traçable jusqu'aux statistiques officielles |
+| Besoin de séparer les scopes 1 + 2 du scope 3 amont, ou de connaître la part émise hors UE | **FIGARO** | La seule de ces bases à fournir les deux décompositions |
+| Un produit manufacturé, agricole ou chimique précis, tout pays | **CEDA** | 400 secteurs : ciment, élevage ou acier ne sont pas dilués dans une branche large |
+| Fournisseur hors d'Europe (Asie, Amériques, Afrique, Moyen-Orient) | **CEDA** | 149 pays |
+| Fournisseur aux États-Unis | **EPA Supply Chain** | 1 016 produits, modèle national |
+| Fournisseur au Canada | **OpenIO-Canada** | 13 provinces et territoires, modèle national |
+| Fournisseur au Japon | **MOE Japan** | Référence nationale |
+| France, bilan réglementaire | Ratios monétaires de la **Base Carbone** | Référence nationale publiée par l'ADEME |
+| Produits énergétiques ou traitement de déchets achetés en tant que tels | **EXIOBASE** | Produits détaillés par combustible et par filière, données 2019 |
+
+Un modèle national, quand il existe pour le pays du fournisseur, est en général le meilleur point
+de départ ; FIGARO et CEDA sont les deux options qui couvrent de nombreux pays avec une méthode
+homogène.
+
+### Ce qui distingue les bases
+
+Telles que disponibles dans Ecodex en octobre 2026.
+
+| Base | Pays | Secteurs | Années | Base de prix | Méthode en une ligne |
+|---|---|---|---|---|---|
+| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2020-2023, annuel | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
+| CEDA (Watershed) | 149 | 400 secteurs | 2021-2024 | Prix d'achat | Modèle mondial, une année de base d'émissions réindexée par année |
+| EXIOBASE v3.8.2 | 48 pays et régions | 184 produits | 2019 | Prix de base | Modèle multirégional mondial, consortium académique |
+| EPA Supply Chain v1.4 | États-Unis | 1 016 produits | USD 2024 | Prix d'achat | Modèle national USEEIO |
+| OpenIO-Canada | Canada, 13 provinces et territoires | 472 produits | 2022 | voir la source | Modèle national, immobilisations incluses |
+| Ratios monétaires Base Carbone | France | 56 produits | 2019-2023 | Prix de base | Contenus importés FIGARO et comptes nationaux de l'Insee (SDES) |
+| MOE Japan | Japon | environ 540 postes | jusqu'à 2020 | voir la source | Référence nationale |
+
+Trois différences expliquent l'essentiel des écarts entre deux facteurs pour le « même » achat :
+
+- **La base de prix.** Le prix de base exclut les taxes sur les produits et les marges de commerce
+  et de transport ; le prix d'achat les inclut. Les mêmes émissions divisées par un montant plus
+  grand donnent un facteur plus bas.
+- **Le détail sectoriel.** Avec 62 branches, un même facteur regroupe le ciment et le verre, ou
+  l'élevage et les céréales.
+- **Le périmètre du modèle.** Certains modèles incluent les immobilisations, la plupart non ; les
+  années et les inventaires d'émissions diffèrent.
+
+### Repères pour FIGARO
+
 - Adapté : services et dépenses non détaillées dans un pays européen, quand on veut un facteur
   traçable jusqu'aux statistiques officielles.
-- Peu adapté : un produit industriel ou agricole précis. Une branche sur 64 regroupe des activités
-  très différentes (le ciment dans les « autres produits minéraux non métalliques », l'élevage dans
-  l'« agriculture ») ; une base plus détaillée ou un facteur physique est préférable.
-- France : les ratios publiés par l'ADEME dans la Base Carbone restent la référence nationale. Ils
-  sont environ 15 % plus élevés que ces facteurs, pour une raison documentée ci-dessous.
+- Peu adapté : un produit industriel ou agricole précis (voir le tableau ci-dessus).
+- France : les ratios de la Base Carbone sont environ 15 % plus élevés que ces facteurs, pour une
+  raison documentée (voir Contrôles).
 - Un montant TTC ou incluant des marges commerciales surestime les émissions avec des facteurs au
   prix de base.
+- Ne pas changer de base d'une année sur l'autre pour une même catégorie de dépenses : le
+  changement de base apparaîtrait comme une variation d'émissions.
 
 ## Méthode
 
