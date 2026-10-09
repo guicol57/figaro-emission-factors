@@ -259,6 +259,8 @@ prices, 261 rebased, 295 with margins (valuation matrices of 2022: 71% basic val
 | Direct GHG and CO2 emissions by country and industry | `env_ac_ghgfp`, `env_ac_co2fp` with `c_dest=WORLD`, `na_item=TOTAL` |
 | Checks: official footprints, air emissions accounts, national-accounts output, French symmetric IOT | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
 | Purchaser prices: use tables at purchasers' and basic prices, trade and transport margins, taxes less subsidies, margins column of the supply table | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
+| Ground truth: electricity prices, emissions and output of public power and heat plants, steel exports | `nrg_pc_205`, `env_air_gge` (CRF 1.A.1.a), `nrg_bal_peh`, Comext `DS-045409` |
+| Ground truth: CO2 intensity of crude steel, world | worldsteel, World Steel in Figures [2024](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2024.pdf) and [2025](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2025.pdf) (`data/worldsteel_co2_intensity.csv`) |
 | Check: upstream GHG content of French products, table GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Emissions of non-EU countries are the EDGAR-based estimates produced by Eurostat itself
@@ -313,6 +315,21 @@ Reports in `results/<edition>/validation/`.
    1.11-1.14), 0.99 for services. Supply-chain layers in median: own operations 10-11%, tier 1 22-24%,
    tier 2 21-22%, tier 3 and beyond 35-40%. Aviation radiative forcing in 2023: +51% in median on air
    transport, +1% in median on the other industries (business travel), at most +46% (travel agencies).
+7. **Ground truth from outside the model**, reported as measured (the model is not tuned to it):
+   - **Electricity (D35)** against grid intensity / price, i.e. inventory emissions of public power and
+     heat plants (CRF 1.A.1.a) per kWh produced, divided by the non-household electricity price
+     excluding taxes, 2021 to 2023 (26 to 27 countries): the direct factor is 0.55 to 0.59 times that
+     value in median, the total factor 0.97 to 1.15. D35 output covers more than electricity sold to
+     businesses: electricity traded within the industry, sales
+     to households at higher prices, gas distribution and steam. A D35 monetary factor is therefore a
+     poor proxy for an electricity bill: use a factor per kWh.
+   - **Basic metals (C24)** against the worldsteel world CO2 intensity of crude steel (1.91 and 1.92 t
+     per t in 2022 and 2023) divided by the unit value of EU steel exports (Comext, HS 72: 1,193 and
+     1,005 EUR/t): the C24 total of the 21 EU countries above 1 billion EUR of output is 0.58 and 0.46
+     times that value in median (range 539 to 1,661 kgCO2e/kEUR). Expected to be below: C24 also covers
+     non-ferrous metals and foundries, and the worldsteel figure is a world average while the route
+     and fuel mix of steelmaking differ by country. For steel bought by weight, a factor per tonne is
+     better.
 
 ### Why France is about 15% below Base Carbone
 

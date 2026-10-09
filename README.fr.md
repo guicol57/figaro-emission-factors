@@ -272,6 +272,8 @@ Textile, habillement et cuir (C13-15) acheté en France, 2023, kgCO2e par k€ :
 | Émissions directes de GES et de CO2 par pays et branche | `env_ac_ghgfp`, `env_ac_co2fp` avec `c_dest=WORLD`, `na_item=TOTAL` |
 | Contrôles : empreintes officielles, comptes d'émissions dans l'air, production des comptes nationaux, TES symétrique français | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
 | Prix d'achat : tableaux des emplois au prix d'acquisition et au prix de base, marges de commerce et de transport, impôts nets des subventions, colonne des marges du tableau des ressources | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
+| Vérité terrain : prix de l'électricité, émissions et production des centrales publiques, exportations d'acier | `nrg_pc_205`, `env_air_gge` (CRF 1.A.1.a), `nrg_bal_peh`, Comext `DS-045409` |
+| Vérité terrain : intensité CO2 de l'acier brut, monde | worldsteel, World Steel in Figures [2024](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2024.pdf) et [2025](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2025.pdf) (`data/worldsteel_co2_intensity.csv`) |
 | Contrôle : contenu amont en GES des produits français, tableau GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Les émissions des pays hors UE sont les estimations fondées sur EDGAR produites par Eurostat
@@ -331,6 +333,21 @@ Rapports dans `results/<édition>/validation/`.
    médiane : émissions propres 10-11 %, rang 1 22-24 %, rang 2 21-22 %, rang 3 et au-delà 35-40 %.
    Forçage radiatif de l'aviation en 2023 : +51 % en médiane sur le transport aérien, +1 % en médiane sur
    les autres branches (déplacements professionnels), au plus +46 % (agences de voyage).
+7. **Vérité terrain hors du modèle**, rapportée telle que mesurée (le modèle n'y est pas calé) :
+   - **Électricité (D35)** par rapport à intensité du réseau / prix, soit les émissions d'inventaire des
+     centrales publiques d'électricité et de chaleur (CRF 1.A.1.a) par kWh produit, divisées par le prix
+     de l'électricité hors taxes pour les non-ménages, 2021 à 2023 (26 à 27 pays) : le facteur direct vaut
+     0,55 à 0,59 fois cette valeur en médiane, le facteur total 0,97 à 1,15. La production de D35 couvre
+     plus que l'électricité vendue aux entreprises : électricité échangée au sein de la branche, ventes aux ménages à des prix plus élevés, distribution de gaz et
+     vapeur. Un facteur monétaire D35 est donc un mauvais substitut pour une facture d'électricité :
+     utiliser un facteur par kWh.
+   - **Métallurgie (C24)** par rapport à l'intensité CO2 mondiale de l'acier brut de worldsteel (1,91 et
+     1,92 t par t en 2022 et 2023) divisée par la valeur unitaire des exportations d'acier de l'UE (Comext,
+     SH 72 : 1 193 et 1 005 €/t) : le total C24 des 21 pays de l'UE au-dessus de 1 Md€ de production vaut
+     0,58 et 0,46 fois cette valeur en médiane (de 539 à 1 661 kgCO2e/k€). Un écart attendu dans ce sens :
+     C24 couvre aussi les métaux non ferreux et les fonderies, et le chiffre de worldsteel est une moyenne
+     mondiale alors que les filières et les combustibles de la sidérurgie diffèrent selon les pays. Pour
+     de l'acier acheté au poids, un facteur par tonne est préférable.
 
 ### Pourquoi la France est environ 15 % sous la Base Carbone
 

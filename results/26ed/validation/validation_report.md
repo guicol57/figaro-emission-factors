@@ -148,3 +148,24 @@ Median share of the total: own operations f, tier 1 suppliers f A, tier 2 f A^2,
 
 - Air transport (H51), 31 countries: total +51% in median (26% to 62%).
 - Other industries: +1.02% in median, 50.5% of rows above +1%, largest +46.2% (N79, DK).
+
+## 7. Ground truth from outside the model
+
+### 7a. Electricity, gas, steam (D35) against grid intensity / electricity price
+
+Expected kgCO2e per kEUR = emissions of public electricity and heat production (national inventories, CRF 1.A.1.a, env_air_gge) / electricity and heat output of main-activity producers (nrg_bal_peh) / non-household electricity price excluding taxes, all bands (nrg_pc_205, mean of the two half-years; published for most countries from 2021).
+
+| year | countries | direct factor / expected, median (min-max) | total factor / expected, median (min-max) |
+|---|---|---|---|
+| 2021 | 27 | 0.59 (0.26-1.46) | 0.97 (0.52-1.78) |
+| 2022 | 27 | 0.58 (0.21-2.45) | 1.15 (0.57-3.97) |
+| 2023 | 26 | 0.55 (0.25-1.14) | 1.00 (0.55-2.70) |
+
+### 7b. Basic metals (C24) against steel intensity / steel price
+
+Expected kgCO2 per kEUR = worldsteel world CO2 intensity of crude steel / unit value of EU steel exports (Comext, all EU reporters, to all partners): iron and steel (HS 72) or hot-rolled flat products (HS 7208). FIGARO total of C24, EU countries with a C24 output above 1 billion EUR.
+
+| year | tCO2/t | EUR/t HS 72 | EUR/t HS 7208 | expected (HS 72 / HS 7208) | countries | FIGARO total, median (min-max) | ratio to HS 72, median |
+|---|---|---|---|---|---|---|---|
+| 2022 | 1.91 | 1193 | 1039 | 1601 / 1839 | 21 | 935 (539-1519) | 0.58 |
+| 2023 | 1.92 | 1005 | 866 | 1911 / 2216 | 21 | 886 (498-1661) | 0.46 |
