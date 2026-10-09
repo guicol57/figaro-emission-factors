@@ -10,6 +10,8 @@
     monetary ratios in ADEME Base Carbone), (a) pure FIGARO, (b) FIGARO import contents combined with
     the French national symmetric IOT, which approximates the 'simplified SNAC' method of the SDES.
  4. Country of demand: how far the demand factors move from the supply factors of the same country.
+ 5. Purchaser prices: coverage of the valuation matrices, accounting identity, size of the price wedge, and
+    the sensitivity to the two approximations (margin services mix, VAT of exempt buyers).
 """
 import sys
 from pathlib import Path
@@ -136,6 +138,65 @@ for y in years:
                   "purchases_share_domestic": d.purchases_share_domestic}).to_csv(VAL / f"4_demand_vs_supply_{y}.csv")
     report.append(f"| {y} | {len(q)} | {q.median():.3f} | {q.quantile(.1):.2f} | {q.quantile(.9):.2f} | "
                   f"{share(q, .10)} | {d.purchases_share_domestic.median():.0%} |")
+
+# ---------------------------------------------------------------- 5. purchaser prices
+import build_purchaser_prices as bpp
+
+pp = pd.read_csv(OUT / f"figaro_purchaser_prices_{EDITION}.csv")
+report += ["", "## 5. Purchaser prices (business purchases, national use tables)", "",
+           "Coverage of the 31 published countries by year: valuation matrices of the same year / nearest year "
+           f"within {bpp.MAX_CARRY} years / none.", "",
+           "| year | same year | carried | none | countries without valuation data |", "|---|---|---|---|---|"]
+for y in years:
+    vy = pp[pp.year == y].groupby("geo").valuation_year.first()
+    vy = vy[vy.index.isin(published)]
+    report.append(f"| {y} | {(vy == y).sum()} | {(vy != y).sum()} | {len(published) - len(vy)} | "
+                  f"{', '.join(sorted(published - set(vy.index)))} |")
+raw = bpp.components()
+raw = raw.dropna(subset=["pp", "bp", "t", "m"])
+raw = raw[~raw.index.get_level_values("sector").isin(bpp.MARGIN_SERVICES) & (raw.pp > 0)]
+gap = ((raw.pp - raw.bp - raw.m - raw.t) / raw.pp).abs()
+report += ["", f"Accounting identity PP = BP + margins + taxes, cells with all four tables published: {len(gap)}, "
+           f"{(gap <= bpp.IDENTITY_TOL).mean():.1%} within 1% (the others are dropped). Margins derived as "
+           f"PP - BP - taxes (margins matrix not published): {pp.margins_derived.mean():.1%} of rows.", ""]
+pub = pp[pp.geo.isin(published) & (pp.pp_meur >= 50) & (pp.demand_total > 0) & ~pp.sector.isin(["T", "U"])].copy()
+goods = pub.sector.str[0].isin(list("ABC"))
+pub["with_margins_vs_basic"] = pub.demand_total_pp_with_margins / pub.demand_total
+report += ["Purchaser-price factor of the country of demand vs the basic-price factor, published rows (purchases above 50 MEUR):", "",
+           "| year | n | goods: rebasing ratio, median | goods: with margins / basic, median (p10-p90) | services: with margins / basic, median (p10-p90) |",
+           "|---|---|---|---|---|"]
+for y in years:
+    g, sv = pub[(pub.year == y) & goods], pub[(pub.year == y) & ~goods]
+    report.append(f"| {y} | {len(g) + len(sv)} | {g.rebasing_ratio.median():.3f} | {g.with_margins_vs_basic.median():.3f} "
+                  f"({g.with_margins_vs_basic.quantile(.1):.2f}-{g.with_margins_vs_basic.quantile(.9):.2f}) | "
+                  f"{sv.with_margins_vs_basic.median():.3f} ({sv.with_margins_vs_basic.quantile(.1):.2f}-"
+                  f"{sv.with_margins_vs_basic.quantile(.9):.2f}) |")
+pub.to_csv(VAL / "5_purchaser_prices.csv", index=False)
+
+# sensitivity 1: margins priced with the national mix of margin services vs all at wholesale trade (G46)
+fac_full, dem_raw = bpp.load_factors(EDITION)
+g46 = fac_full.total.xs("G46", level="sector")
+alt = pub.margin_term / pub.margin_factor * pd.Series(list(zip(pub.year, pub.geo))).map(g46).to_numpy()
+d1 = (pub.demand_total_pp_rebased + alt) / pub.demand_total_pp_with_margins - 1
+# sensitivity 2: tax wedge of all industries vs industries other than the VAT-exempt ones
+comp = bpp.components()
+exempt = bpp.components(bpp.VAT_EXEMPT_USERS)
+taxable = bpp.valuation((comp - exempt).dropna(subset=["pp", "bp", "t"]))
+alt2 = bpp.price_factors(dem_raw, fac_full, taxable, bpp.margin_mix())
+alt2 = pub.merge(alt2[["year", "geo", "sector", "demand_total_pp_with_margins"]], on=["year", "geo", "sector"],
+                 suffixes=("", "_taxable"))
+d2 = alt2.demand_total_pp_with_margins_taxable / alt2.demand_total_pp_with_margins - 1
+tax_all = comp.t / comp.bp
+tax_ex = (exempt.t / exempt.bp).reindex(tax_all.index)
+fr = ("FR", 2022, "J62_63")
+report += ["", "Sensitivity of the factor with margins (published rows, all years):", "",
+           "| variant | n | median change | p10 | p90 | within 2% |", "|---|---|---|---|---|---|",
+           f"| margins all priced at wholesale trade (G46) instead of the national mix of margin services | {d1.notna().sum()} | "
+           f"{d1.median():+.1%} | {d1.quantile(.1):+.1%} | {d1.quantile(.9):+.1%} | {(d1.abs() <= .02).mean():.0%} |",
+           f"| taxes of the industries other than the VAT-exempt ones (K, O, P, Q) | {d2.notna().sum()} | "
+           f"{d2.median():+.1%} | {d2.quantile(.1):+.1%} | {d2.quantile(.9):+.1%} | {(d2.abs() <= .02).mean():.0%} |",
+           "", f"Non-deductible VAT sits in the taxes: France 2022, taxes on IT services (J62-63) bought by all industries "
+           f"{tax_all.get(fr):.1%} of the basic value, by the VAT-exempt ones {tax_ex.get(fr):.1%} (VAT rate 20%)."]
 
 (VAL / "validation_report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
 print("\n".join(report))

@@ -4,6 +4,8 @@
 
     python fetch_eurostat.py --tables <folder>     also download the FIGARO tables (48 MB per year)
 
+    python fetch_eurostat.py --only <name>[,<name>...]   refresh some extracts only, keep the others as committed
+
 Writes CSV files in data/. The FIGARO industry-by-industry tables (matrix CSV, 2026 edition) come
 from the public FIGARO space on CIRCABC (guest access), linked from
 https://ec.europa.eu/eurostat/web/esa-supply-use-input-tables/database
@@ -19,6 +21,9 @@ import pandas as pd
 API = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"
 DATA = Path(__file__).parent / "data"
 
+# intermediate consumption of all industries, and of the industries whose sales are mostly exempt from VAT
+PRICE_USERS = ("TOTAL", "K64", "K65", "K66", "O", "P", "Q86", "Q87_88")
+
 EXTRACTS = {
     # direct emissions by emitting country x industry (environmental extension of FIGARO)
     "env_ac_ghgfp_direct_emissions": ("env_ac_ghgfp?c_dest=WORLD&na_item=TOTAL", ["c_orig", "nace_r2", "time"]),
@@ -33,6 +38,18 @@ EXTRACTS = {
     "nama_10_a64_p1": ("nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2014", ["geo", "nace_r2", "time"]),
     # French national symmetric input-output table, domestic and imports (validation 3, SNAC)
     "naio_10_cp1700_FR": ("naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2014", ["stk_flow", "prd_ava", "prd_use", "time"]),
+    # purchaser prices (build_purchaser_prices.py): national use tables by product, for the intermediate
+    # consumption of all industries (TOTAL) and of the VAT-exempt ones (validation of the tax wedge),
+    # at purchasers' prices, at basic prices, and the two valuation matrices between them
+    **{name: (f"{ds}?unit=MIO_EUR{extra}&sinceTimePeriod=2014&" + "&".join(f"ind_use={u}" for u in PRICE_USERS),
+              ["geo", prd, "ind_use", "time"])
+       for name, ds, prd, extra in (
+           ("naio_10_cp16_purchasers", "naio_10_cp16", "prd_ava", ""),
+           ("naio_10_cp1610_basic", "naio_10_cp1610", "prd_ava", "&stk_flow=TOTAL"),
+           ("naio_10_cp1620_margins", "naio_10_cp1620", "cpa2_1", ""),
+           ("naio_10_cp1630_taxes", "naio_10_cp1630", "cpa2_1", ""))},
+    # trade and transport margins column of the supply table: which margin services the margins pay for
+    "naio_10_cp15_margins_supply": ("naio_10_cp15?unit=MIO_EUR&ind_impv=OTTM&sinceTimePeriod=2014", ["geo", "prd_amo", "time"]),
 }
 
 
@@ -62,8 +79,16 @@ def fetch(query: str, keep: list[str]) -> tuple[pd.DataFrame, str]:
 
 if __name__ == "__main__":
     DATA.mkdir(exist_ok=True)
+    only = set(sys.argv[sys.argv.index("--only") + 1].split(",")) if "--only" in sys.argv else set(EXTRACTS)
+    assert only <= set(EXTRACTS), f"unknown extract {only - set(EXTRACTS)}"
+    sources = DATA / "SOURCES.csv"
+    previous = {line.split(",", 1)[0]: line for line in sources.read_text(encoding="utf-8").splitlines()[1:]} if sources.exists() else {}
     log = []
     for name, (query, keep) in EXTRACTS.items():
+        if name not in only:
+            if f"{name}.csv" in previous:
+                log.append(previous[f"{name}.csv"])
+            continue
         df, updated = fetch(query, keep)
         df.to_csv(DATA / f"{name}.csv", index=False)
         log.append(f"{name}.csv,{query},{updated},{len(df)}")
@@ -76,4 +101,4 @@ if __name__ == "__main__":
             if not target.exists():
                 urllib.request.urlretrieve(CIRCABC + node, target)
             print(target.name, target.stat().st_size)
-    (DATA / "SOURCES.csv").write_text("file,api_query,eurostat_last_update,rows\n" + "\n".join(log) + "\n", encoding="utf-8")
+    sources.write_text("file,api_query,eurostat_last_update,rows\n" + "\n".join(log) + "\n", encoding="utf-8")

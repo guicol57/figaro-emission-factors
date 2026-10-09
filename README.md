@@ -6,7 +6,8 @@ Spend-based greenhouse gas emission factors for 31 European countries and 62 ind
 from Eurostat's FIGARO inter-country input-output tables and the emission accounts Eurostat uses
 for its official footprints. Scopes 1, 2 and 3 upstream, in kgCO2e per thousand EUR of output, in
 two views: the country of **supply** (where the goods or services are produced) and the country of
-**demand** (the mix a country actually buys, domestic and imported).
+**demand** (the mix a country actually buys, domestic and imported), and the demand view converted to the
+**purchaser prices** companies actually pay.
 
 This repository holds the full calculation: scripts, input extracts, results and checks.
 Maintained by [Ecodex](https://getecodex.com), where the factors are published within the source "Eurostat".
@@ -46,6 +47,19 @@ product, 2014 to 2023. Same value columns, averaged over every country of origin
 
 Rows with purchases below 50 million EUR are left out.
 
+`results/figaro_purchaser_price_factors_26ed.csv`: 13,495 rows, one per year, purchasing country and
+product, 2014 to 2023, for the 26 countries that publish valuation matrices (see Purchaser prices).
+
+| Column | Meaning |
+|---|---|
+| `total_purchaser_prices_with_margins` | factor of the country of demand per k EUR at purchaser prices, emissions of the trade and transport margins included: the factor to apply to an invoice amount excluding deductible VAT |
+| `total_purchaser_prices_rebased` | same emissions as the basic-price factor, divided by the purchaser price (margins carry no emissions) |
+| `total_basic_prices` | the factor of the demand table |
+| `rebasing_ratio`, `margin_term` | to convert any basic-price factor of the product: `factor x rebasing_ratio + margin_term` |
+| `share_basic_value`, `share_trade_transport_margins`, `share_taxes_less_subsidies` | split of the purchaser price paid by the industries of the country |
+| `margin_factor`, `margins_transport_share` | factor of the margin services (mix of trade and transport of the country) and the transport part of that mix |
+| `valuation_year`, `purchases_pp_meur` | year of the national tables used, and the purchases at purchaser prices that year (million EUR) |
+
 ## When to use these factors
 
 A spend-based factor is a fallback: a physical factor (per kg, kWh, km) or supplier-specific data
@@ -72,7 +86,8 @@ Textiles, wearing apparel and leather (C13-15), 2023, kgCO2e per k EUR:
 - **Origin unknown**: demand table, country of the purchasing company.
 - Retail trade (G47) is not a substitute: at basic prices it covers the trade margin only (shops,
   their energy and logistics), never the goods sold. A purchase at purchaser prices is the basic value
-  of the goods (factor of the product) plus the trade margin (factor of G47).
+  of the goods (factor of the product) plus the trade and transport margins (factors of G and H) plus
+  taxes: the purchaser-price table does that split for business purchases.
 
 The two views are close for services, mostly bought locally (2023: median gap 3%, two thirds of the
 pairs within 10%), and diverge for goods (median gap 11%, 42% within 10%), most of all for imported
@@ -102,7 +117,7 @@ As available in Ecodex in October 2026.
 
 | Database | Countries | Sectors | Years | Price basis | Method in one line |
 |---|---|---|---|---|---|
-| **FIGARO** (this repository) | 31 European | 62 industries | 2014-2023, yearly (2024: scopes 1 + 2) | Basic | Eurostat inter-country tables and emission accounts |
+| **FIGARO** (this repository) | 31 European | 62 industries | 2014-2023, yearly (2024: scopes 1 + 2) | Basic; purchaser for business purchases in 26 countries | Eurostat inter-country tables and emission accounts |
 | CEDA (Watershed) | 149 | 400 sectors | 2021-2024 | Purchaser | Global model, one emission base year reindexed by year |
 | EXIOBASE v3.8.2 | 48 countries and regions | 184 products | 2019 | Basic | Global multi-regional model, academic consortium |
 | EPA Supply Chain v1.4 | United States | 1,016 commodities | 2024 USD | Purchaser | USEEIO national model |
@@ -125,7 +140,10 @@ Three differences explain most of the gaps between two factors for the "same" pu
 - Poor fit: a specific industrial or agricultural product (see the table above).
 - France: the Base Carbone ratios are about 15% higher than these factors, for a documented
   reason (see Checks).
-- Purchase amounts including VAT or retail margins overstate emissions with basic-price factors.
+- An invoice amount is at purchaser prices: with a basic-price factor it overstates emissions (goods:
+  about 9% in median, more than 25% for one row in ten). Use the purchaser-price table, or `rebasing_ratio`
+  and `margin_term` with a supply factor when the origin is known. Amounts including deductible VAT
+  overstate in any case.
 - Do not switch database for one spend category from one year to the next: the switch would show
   up as a change in emissions.
 
@@ -158,6 +176,45 @@ The weights are business purchases (intermediate consumption), not household fin
 origin enters them, including rows left out of the supply table. `build_factors.py` checks that the
 demand factors times the purchases give back the emissions embodied in each country's purchases.
 
+### Purchaser prices
+
+The factors above are per EUR at basic prices. A company pays the basic value of the product plus the
+trade and transport margins of its distributors plus taxes less subsidies on products. Eurostat
+publishes, per country and year, the use tables at purchasers' prices and at basic prices and the two
+valuation matrices between them, by product and by user. `build_purchaser_prices.py` takes them over the
+intermediate consumption of all industries, for a purchasing country s and a product p:
+
+```
+PP           = BP + M + T                              national use tables, business purchases
+FE_M(s)      = sum over margin services k of w_k x m(s, k)
+               w_k = share of k (G45-G47, H49-H53) in the margins of the supply table of s
+with margins = (BP x FE_BP + M x FE_M(s) + T x 0) / PP  = FE_BP x BP / PP + M / PP x FE_M(s)
+rebased      = FE_BP x BP / PP
+```
+
+FE_BP is the factor of the country of demand. Business purchases, not total supply: French textiles in
+2022 cost 1.41 times their basic value to the industries that buy them, 1.79 times on average over all
+uses, households included (retail margins). Same approach as the US EPA factors with and without margins.
+
+Textiles, wearing apparel and leather (C13-15) bought in France, 2023, kgCO2e per k EUR: 369 at basic
+prices, 261 rebased, 295 with margins (valuation matrices of 2022: 71% basic value, 26% margins, 3% taxes).
+
+- The margins matrix gives margins in total. Their split between trade and transport services is the
+  one of the supply table of the country, the same for every product (transport is 6% of margins in
+  median). Pricing all margins at wholesale trade instead changes the result by less than 2% for 96% of
+  rows (validation 5).
+- Taxes carry no emissions. They include non-deductible VAT: in France in 2022, the VAT-exempt
+  industries (finance, insurance, public administration, education, health) pay taxes of 15% of the
+  basic value on the IT services they buy, against 2.6% for all industries. The table averages all
+  industries, so it slightly understates the factor for a fully VAT-deductible buyer (+0.4% in median,
+  +3% at p90, without the VAT-exempt industries).
+- Valuation matrices are compulsory every 5 years only: a year without them takes the nearest year of
+  the same country within 5 years (`valuation_year`, 66% of rows use the same year). Germany, Spain,
+  Bulgaria, Switzerland and the United Kingdom publish none (or not the margins and taxes): no rows.
+- Margin services bought as such (wholesale fees, freight) carry no margin of their own. When the
+  margins matrix is missing but the three other tables are published, margins = PP - BP - taxes; cells
+  where the four tables disagree by more than 1% are dropped.
+
 ### Inputs
 
 | Data | Eurostat source |
@@ -165,6 +222,7 @@ demand factors times the purchases give back the emissions embodied in each coun
 | Inter-country input-output table, industry by industry, 64 industries x 50 regions, 2026 edition | FIGARO, [CIRCABC public space](https://ec.europa.eu/eurostat/web/esa-supply-use-input-tables/database) (48 MB per year, downloaded by `fetch_eurostat.py --tables`) |
 | Direct GHG and CO2 emissions by country and industry | `env_ac_ghgfp`, `env_ac_co2fp` with `c_dest=WORLD`, `na_item=TOTAL` |
 | Checks: official footprints, air emissions accounts, national-accounts output, French symmetric IOT | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
+| Purchaser prices: use tables at purchasers' and basic prices, trade and transport margins, taxes less subsidies, margins column of the supply table | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
 | Check: upstream GHG content of French products, table GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Emissions of non-EU countries are the EDGAR-based estimates produced by Eurostat itself
@@ -210,6 +268,11 @@ Reports in `results/<edition>/validation/`.
 4. **Country of demand.** Against the supply factor of the same country and product: median ratio
    1.04 to 1.05 depending on the year, 10% of pairs below 0.93-0.95, 10% above 1.37-1.45. Highest
    for imported goods (textiles 1.39, mining products 1.59 in 2023).
+5. **Purchaser prices.** Basic value + margins + taxes = purchaser price for 97.1% of the cells where
+   the four tables are published (the others are dropped). With margins, the purchaser-price factor of
+   goods is 0.91 to 0.92 times the basic-price factor in median (10% of rows below 0.79-0.80), 0.98 for
+   services; the rebasing alone gives 0.85-0.86 for goods. Coverage by year and the two sensitivities are
+   in the report.
 
 ### Why France is about 15% below Base Carbone
 
@@ -229,8 +292,10 @@ A comparison with CEDA and EXIOBASE is in [docs/comparison-ceda-exiobase.md](doc
 pip install -r requirements.txt
 python fetch_eurostat.py --tables tables      # Eurostat extracts into data/, FIGARO tables into tables/
 python build_factors.py --figaro-dir tables   # results/26ed/ (all 46 regions, not committed)
+python build_purchaser_prices.py              # results/26ed/figaro_purchaser_prices_26ed.csv
 python validate.py                            # results/26ed/validation/
-python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv
+python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv,
+                                              # figaro_purchaser_price_factors_26ed.csv
 ```
 
 About 5 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
@@ -248,6 +313,9 @@ in place: rerunning `fetch_eurostat.py` later may return revised data; the extra
   industries (see above), so French demand factors of goods are probably on the low side. The rest of
   the world is one block with one factor per industry. The mix of a given company can differ from
   the average of its country.
+- Purchaser prices: national averages over all buying industries, split of margins between trade and
+  transport the same for every product, nearest year when the valuation matrices are not annual. The
+  margin services are priced with the factors of the purchasing country (they are produced there).
 
 ## Licence and attribution
 

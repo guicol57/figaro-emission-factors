@@ -93,3 +93,34 @@ path = HERE / "results" / f"figaro_demand_emission_factors_{EDITION}.csv"
 dout.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
 print(path.name, len(dout), "rows |", dout.country_code.nunique(), "countries |", dout.nace_code.nunique(),
       "products |", sorted(dout.year.unique()))
+
+# ---------------------------------------------------------------- purchaser prices
+# Rows of the country-of-demand table above whose purchasing country publishes valuation matrices (within
+# 5 years), see build_purchaser_prices.py. Purchases at purchaser prices above 50 million EUR as well.
+pp = pd.read_csv(HERE / "results" / EDITION / f"figaro_purchaser_prices_{EDITION}.csv")
+pp = pp.merge(dout[["year", "country_code", "nace_code"]], left_on=["year", "geo", "sector"],
+              right_on=["year", "country_code", "nace_code"])
+pp = pp[pp.pp_meur >= MIN_OUTPUT_MEUR]
+pout = pd.DataFrame({
+    "year": pp.year, "country_code": pp.geo, "country": pp.geo.map(geo.name_en),
+    "nace_code": pp.sector, "product": pp.sector.map(nace.name_en),
+    # national use tables: intermediate consumption of all industries
+    "valuation_year": pp.valuation_year, "purchases_pp_meur": pp.pp_meur.round(1),
+    "share_basic_value": pp.share_basic, "share_trade_transport_margins": pp.share_margins,
+    "share_taxes_less_subsidies": pp.share_taxes, "margins_transport_share": pp.margin_mix_transport,
+    # FE_PP = FE_BP x rebasing_ratio + margin_term (any basic-price factor of the product: demand, or supply of the origin)
+    "rebasing_ratio": pp.rebasing_ratio, "margin_factor": pp.margin_factor, "margin_term": pp.margin_term,
+    # kgCO2e per thousand EUR, country of demand, total scopes 1-3 upstream
+    "total_basic_prices": pp.demand_total, "total_purchaser_prices_rebased": pp.demand_total_pp_rebased,
+    "total_purchaser_prices_with_margins": pp.demand_total_pp_with_margins,
+})
+pout[["share_basic_value", "share_trade_transport_margins", "share_taxes_less_subsidies", "margins_transport_share",
+      "rebasing_ratio"]] = pout[["share_basic_value", "share_trade_transport_margins", "share_taxes_less_subsidies",
+                                 "margins_transport_share", "rebasing_ratio"]].round(4)
+value_cols = ["margin_factor", "margin_term", "total_basic_prices", "total_purchaser_prices_rebased",
+              "total_purchaser_prices_with_margins"]
+pout[value_cols] = pout[value_cols].round(2)
+assert not pout.duplicated(["year", "country_code", "nace_code"]).any()
+path = HERE / "results" / f"figaro_purchaser_price_factors_{EDITION}.csv"
+pout.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
+print(path.name, len(pout), "rows |", pout.country_code.nunique(), "countries |", sorted(pout.year.unique()))
