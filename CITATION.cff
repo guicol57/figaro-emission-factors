@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use these emission factors, please cite them as below."
+message: "Attribution is required: if you use these emission factors, cite them as below (see DATA_LICENSE.md)."
 title: "FIGARO monetary emission factors"
 type: dataset
 authors:
@@ -7,7 +7,7 @@ authors:
     website: "https://getecodex.com"
 version: "2026.4"
 date-released: "2026-10-09"
-license: CC-BY-4.0
+license: CC-BY-SA-4.0
 abstract: "Spend-based greenhouse gas emission factors (scopes 1, 2 and 3 upstream) for 31 European countries and 62 NACE industries, 2014 to 2023 (2024 provisional, scopes 1 and 2), computed from Eurostat FIGARO inter-country input-output tables (2026 edition) and Eurostat emission accounts, by country of supply and by country of demand (origin mix of business purchases)."
 keywords: [emission factors, input-output, FIGARO, Eurostat, scope 3, carbon footprint]
 repository-code: "https://github.com/guicol57/figaro-emission-factors"

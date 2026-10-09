@@ -377,7 +377,18 @@ in place: rerunning `fetch_eurostat.py` later may return revised data; the extra
 
 ## Licence and attribution
 
-Code: MIT, see `LICENSE`. Results and documentation: CC BY 4.0, see `DATA_LICENSE.md`, which also
-lists the attribution owed to Eurostat and SDES / Insee for the inputs.
+Code: MIT, see `LICENSE`. Results and documentation: CC BY-SA 4.0 from version 2026.5 (versions
+2026.1 to 2026.4: CC BY 4.0). Details in `DATA_LICENSE.md`, which also lists the attribution owed to
+Eurostat and SDES / Insee for the inputs.
+
+**Attribution is required** for any use of the factors, in the place where the sources of the data
+are listed (report, methodology, documentation of a product or database):
+
+> FIGARO monetary emission factors, Ecodex (https://getecodex.com), version X, DOI 10.5281/zenodo.23157020,
+> licence CC BY-SA 4.0. Computed from Eurostat data.
+
+An adapted version of the factors (modified values, or a database built on a substantial part of
+them) must be shared under the same licence. To integrate the factors into a product without this
+obligation, they are available through Ecodex Connect under a commercial licence.
 
 To cite: see `CITATION.cff`. Archived on Zenodo: all versions https://doi.org/10.5281/zenodo.23157020, one DOI per release listed on that page.

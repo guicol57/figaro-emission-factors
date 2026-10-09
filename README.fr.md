@@ -396,7 +396,18 @@ extraits versionnés dans `data/` sont ceux des résultats publiés.
 
 ## Licence et attribution
 
-Code : MIT, voir `LICENSE`. Résultats et documentation : CC BY 4.0, voir `DATA_LICENSE.md`, qui
-précise aussi l'attribution due à Eurostat et au SDES / Insee pour les données d'entrée.
+Code : MIT, voir `LICENSE`. Résultats et documentation : CC BY-SA 4.0 à partir de la version 2026.5
+(versions 2026.1 à 2026.4 : CC BY 4.0). Détails dans `DATA_LICENSE.md` (en anglais), qui précise
+aussi l'attribution due à Eurostat et au SDES / Insee pour les données d'entrée.
+
+**La citation est obligatoire** pour tout usage des facteurs, à l'endroit où sont listées les sources
+des données (rapport, méthodologie, documentation d'un produit ou d'une base) :
+
+> FIGARO monetary emission factors, Ecodex (https://getecodex.com), version X, DOI 10.5281/zenodo.23157020,
+> licence CC BY-SA 4.0. Computed from Eurostat data.
+
+Une version adaptée des facteurs (valeurs modifiées, ou base construite sur une partie substantielle
+d'entre eux) doit être partagée sous la même licence. Pour intégrer les facteurs dans un produit sans
+cette obligation, ils sont disponibles via Ecodex Connect sous licence commerciale.
 
 Pour citer : voir `CITATION.cff`. Archivé sur Zenodo : toutes versions https://doi.org/10.5281/zenodo.23157020, un DOI par version listé sur cette page.
