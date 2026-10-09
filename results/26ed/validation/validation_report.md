@@ -105,3 +105,46 @@ Sensitivity of the factor with margins (published rows, all years):
 | taxes of the industries other than the VAT-exempt ones (K, O, P, Q) | 12790 | +0.4% | -0.0% | +3.1% | 82% |
 
 Non-deductible VAT sits in the taxes: France 2022, taxes on IT services (J62-63) bought by all industries 2.6% of the basic value, by the VAT-exempt ones 14.9% (VAT rate 20%).
+
+## 6. Variants
+
+### 6a. Country of demand weighted by final purchases vs by business purchases
+
+Same countries and products, both above 50 MEUR of purchases. Ratio = final / intermediate, total scopes 1-3 upstream.
+
+| year | n | goods median (p10-p90) | services median (p10-p90) |
+|---|---|---|---|
+| 2014 | 1670 | 1.00 (0.93-1.11) | 0.99 (0.86-1.06) |
+| 2015 | 1682 | 1.00 (0.93-1.11) | 0.99 (0.86-1.07) |
+| 2016 | 1690 | 1.00 (0.93-1.13) | 0.99 (0.86-1.07) |
+| 2017 | 1698 | 1.00 (0.93-1.13) | 0.99 (0.86-1.07) |
+| 2018 | 1716 | 1.00 (0.93-1.12) | 0.99 (0.85-1.07) |
+| 2019 | 1724 | 1.00 (0.93-1.12) | 0.99 (0.86-1.06) |
+| 2020 | 1712 | 1.01 (0.93-1.13) | 0.99 (0.85-1.06) |
+| 2021 | 1737 | 1.01 (0.93-1.14) | 0.99 (0.84-1.07) |
+| 2022 | 1772 | 1.01 (0.93-1.14) | 0.99 (0.85-1.06) |
+| 2023 | 1778 | 1.01 (0.92-1.13) | 0.99 (0.84-1.06) |
+
+United Kingdom, textiles (C13-15), 2023: supply 261, demand weighted by business purchases 391, by final purchases 553 kgCO2e/kEUR.
+
+### 6b. Supply-chain layers (supply table rows, output above 50 MEUR)
+
+Median share of the total: own operations f, tier 1 suppliers f A, tier 2 f A^2, tier 3 and beyond.
+
+| year | n | own operations | tier 1 | tier 2 | tier 3+ | rows with tier 3+ above 25% |
+|---|---|---|---|---|---|---|
+| 2014 | 1887 | 10% | 23% | 21% | 37% | 78% |
+| 2015 | 1886 | 11% | 24% | 22% | 36% | 75% |
+| 2016 | 1890 | 11% | 24% | 22% | 35% | 74% |
+| 2017 | 1893 | 11% | 24% | 22% | 36% | 74% |
+| 2018 | 1895 | 11% | 24% | 22% | 37% | 77% |
+| 2019 | 1894 | 11% | 24% | 22% | 37% | 77% |
+| 2020 | 1891 | 11% | 24% | 22% | 36% | 77% |
+| 2021 | 1897 | 11% | 23% | 21% | 39% | 79% |
+| 2022 | 1903 | 10% | 22% | 21% | 40% | 81% |
+| 2023 | 1904 | 11% | 22% | 21% | 39% | 79% |
+
+### 6c. Aviation radiative forcing (2023, x1.7 on the direct CO2 of air transport H51)
+
+- Air transport (H51), 31 countries: total +51% in median (26% to 62%).
+- Other industries: +1.02% in median, 50.5% of rows above +1%, largest +46.2% (N79, DK).

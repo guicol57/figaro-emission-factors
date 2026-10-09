@@ -18,13 +18,20 @@ Scope split of m for sector j:
                    (direct emissions of the electricity, gas, steam suppliers, first tier)
   scope 3 upstream = m_j - scope 1 - scope 2
 
+Supply-chain layers of m (for hybrid LCA / truncation): own operations f, tier 1 suppliers f A,
+  tier 2 f A^2, tier 3 and beyond m - f - f A - f A^2.
+Aviation radiative forcing (optional, default off as in the GHG Protocol and the air emissions accounts):
+  the direct CO2 of air transport (H51) times AVIATION_RF (UK DESNZ 2026 methodology, 1.7 on CO2 only),
+  i.e. (AVIATION_RF - 1) * f_co2,H51 (I - A)^-1 added to the total.
+
 Country of demand (demand_factors)
   The factors above follow the country of SUPPLY: 1 EUR of output of industry j produced in region r.
   When the origin of a purchase is unknown, the factor of the country of DEMAND averages the supply
-  factors of every origin r, weighted by what the industries of the purchasing region s buy of
-  product p from r (intermediate consumption, FIGARO flows):
-    w(r | s, p)  = sum_k Z[(r, p), (s, k)] / sum_r' sum_k Z[(r', p), (s, k)]
+  factors of every origin r, weighted by what the purchasing region s buys of product p from r:
+    w(r | s, p)  = U[(r, p), s] / sum_r' U[(r', p), s]
     demand(s, p) = sum_r w(r | s, p) * m(r, p)           (the same for every scope)
+  U = intermediate consumption of the industries of s (business purchases, the default), or the final
+  demand of s (households, government, investment: finished goods and equipment bought as such).
 """
 from __future__ import annotations
 
@@ -36,6 +43,8 @@ import pandas as pd
 FOLD_INTO_ROW = {"AL", "ME", "MK", "RS"}
 ROW = "FIGW1"
 ENERGY = "D35"
+AIR = "H51"
+AVIATION_RF = 1.7
 
 # Eurostat dissemination codes -> FIGARO codes
 GEO_MAP = {"EL": "GR", "UK": "GB", "WRL_REST": ROW}
@@ -46,6 +55,9 @@ NACE_MAP = {
     "F": "F", "I": "I", "L": "L", "O": "O84", "P": "P85",
 }
 FINAL_DEMAND = ("P3_S13", "P3_S14", "P3_S15", "P51G", "P5M")
+# final uses that weight the final-demand view: consumption and gross fixed capital formation, not the
+# changes in inventories (P5M, often negative)
+FINAL_PURCHASES = ("P3_S13", "P3_S14", "P3_S15", "P51G")
 
 
 def _split(code: str) -> tuple[str, str]:
@@ -53,9 +65,10 @@ def _split(code: str) -> tuple[str, str]:
     return geo, sec.replace("CPA_", "")
 
 
-def load_iot(path: str, flat: bool = False) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
+def load_iot(path: str, flat: bool = False, final_purchases: bool = False):
     """Return (Z, x, Y): intermediate flows, total output and final demand by country of
-    final use, indexed by (region, sector), with AL/ME/MK/RS folded into the rest-of-world block."""
+    final use, indexed by (region, sector), with AL/ME/MK/RS folded into the rest-of-world block.
+    With final_purchases=True, also the FINAL_PURCHASES part of Y, negative cells (disposals) set to 0."""
     if flat:
         ff = pd.read_csv(path, usecols=[0, 1, 6], dtype={0: str, 1: str})
         ff.columns = ["row", "col", "v"]
@@ -79,10 +92,15 @@ def load_iot(path: str, flat: bool = False) -> tuple[pd.DataFrame, pd.Series, pd
     x.index = idx
     y = m[[c for c in m.columns if c.endswith(FINAL_DEMAND)]]
     y.index = idx
+    yp = y[[c for c in y.columns if c.endswith(FINAL_PURCHASES)]].clip(lower=0.0)
     y.columns = pd.Index([key(c)[0] for c in y.columns])
     y = y.T.groupby(level=0).sum().T.groupby(level=[0, 1], sort=False).sum()
+    yp.columns = pd.Index([key(c)[0] for c in yp.columns])
+    yp = yp.T.groupby(level=0).sum().T.groupby(level=[0, 1], sort=False).sum()
     z = z.T.groupby(level=[0, 1], sort=False).sum().T.groupby(level=[0, 1], sort=False).sum()
     x = x.groupby(level=[0, 1], sort=False).sum()
+    if final_purchases:
+        return z, x.loc[z.index], y.loc[z.index], yp.loc[z.index]
     return z, x.loc[z.index], y.loc[z.index]
 
 
@@ -148,29 +166,43 @@ def leontief(z: pd.DataFrame, x: pd.Series, e: pd.Series, e_co2: pd.Series | Non
     out["total_eu"] = in_eu @ fl - dom_total * in_eu         # other EU27 countries
     out["s12_dom"] = f + dom_s2
     out["s12_eu"] = in_eu @ fa - dom_s2 * in_eu
+    # supply-chain layers: own operations, tier 1 suppliers, tier 2, tier 3 and beyond
+    fa1 = f @ a
+    out["tier0"], out["tier1"], out["tier2"] = f, fa1, fa1 @ a
+    out["tier3_plus"] = m - f - fa1 - out["tier2"].to_numpy()
+    if e_co2 is not None:
+        is_air = (z.index.get_level_values("sector") == AIR)
+        out["aviation_rf_extra"] = ((AVIATION_RF - 1.0) * fc * is_air) @ linv
     if origin:
         return out, pd.DataFrame(same @ fl, index=codes, columns=z.index)
     return out
 
 
-DEMAND_COLS = ("scope1", "scope2", "scope3_upstream", "total", "scope1_co2", "scope2_co2", "total_co2")
+DEMAND_COLS = ("scope1", "scope2", "scope3_upstream", "total", "scope1_co2", "scope2_co2", "total_co2",
+               "tier0", "tier1", "tier2", "tier3_plus", "aviation_rf_extra")
 
 
-def demand_factors(z: pd.DataFrame, res: pd.DataFrame, by_geo: pd.DataFrame, purchasers) -> pd.DataFrame:
+def intermediate_purchases(z: pd.DataFrame) -> pd.DataFrame:
+    """Intermediate consumption by (origin, product) row and purchasing region column."""
+    col_geo = z.columns.get_level_values("geo")
+    return pd.DataFrame({s: z.loc[:, col_geo == s].sum(axis=1) for s in dict.fromkeys(col_geo)})
+
+
+def demand_factors(purchases: pd.DataFrame, res: pd.DataFrame, by_geo: pd.DataFrame, purchasers) -> pd.DataFrame:
     """Factors of the country of demand, per (purchasing region, product), from the supply factors `res`
     and their split by emitting country `by_geo` (both from leontief(..., origin=True)).
+    purchases: (origin, product) rows x purchasing region columns, intermediate_purchases(z) or final demand Y.
 
-    Columns: intermediate purchases (M EUR) and their origin (domestic / other EU27), the purchase-
-    weighted average of every scope, and where the emissions of the total occur seen from the purchasing
-    country (_dom = in the purchasing country, _eu = other EU27 countries, remainder outside the EU)."""
-    col_geo = z.columns.get_level_values("geo")
-    row_geo = z.index.get_level_values("geo").to_numpy()
-    sector = z.index.get_level_values("sector")
+    Columns: purchases (M EUR) and their origin (domestic / other EU27), the purchase-weighted average of
+    every scope, and where the emissions of the total occur seen from the purchasing country (_dom = in
+    the purchasing country, _eu = other EU27 countries, remainder outside the EU)."""
+    row_geo = purchases.index.get_level_values("geo").to_numpy()
+    sector = purchases.index.get_level_values("sector")
     cols = [c for c in DEMAND_COLS if c in res]
     other_eu = np.isin(row_geo, list(EU27))
     frames = []
     for s in purchasers:
-        u = z.loc[:, col_geo == s].sum(axis=1)                  # what region s buys of each (origin, product)
+        u = purchases[s]                                        # what region s buys of each (origin, product)
         tot = u.groupby(level="sector", sort=False).sum()
         w = (u / tot.reindex(sector).to_numpy()).fillna(0.0)    # origin weights within each product
         d = res[cols].mul(w, axis=0).groupby(level="sector", sort=False).sum()

@@ -12,6 +12,7 @@
  4. Country of demand: how far the demand factors move from the supply factors of the same country.
  5. Purchaser prices: coverage of the valuation matrices, accounting identity, size of the price wedge, and
     the sensitivity to the two approximations (margin services mix, VAT of exempt buyers).
+ 6. Variants: country of demand weighted by final purchases, supply-chain layers, aviation radiative forcing.
 """
 import sys
 from pathlib import Path
@@ -197,6 +198,45 @@ report += ["", "Sensitivity of the factor with margins (published rows, all year
            f"{d2.median():+.1%} | {d2.quantile(.1):+.1%} | {d2.quantile(.9):+.1%} | {(d2.abs() <= .02).mean():.0%} |",
            "", f"Non-deductible VAT sits in the taxes: France 2022, taxes on IT services (J62-63) bought by all industries "
            f"{tax_all.get(fr):.1%} of the basic value, by the VAT-exempt ones {tax_ex.get(fr):.1%} (VAT rate 20%)."]
+
+# ---------------------------------------------------------------- 6. variants
+fin = pd.read_csv(OUT / f"figaro_final_demand_factors_{EDITION}.csv").set_index(["year", "geo", "sector"])
+report += ["", "## 6. Variants", "", "### 6a. Country of demand weighted by final purchases vs by business purchases", "",
+           "Same countries and products, both above 50 MEUR of purchases. Ratio = final / intermediate, total scopes 1-3 upstream.", "",
+           "| year | n | goods median (p10-p90) | services median (p10-p90) |", "|---|---|---|---|"]
+for y in years:
+    d = dem.loc[y]
+    f6 = fin.loc[y]
+    keep = (d.index.get_level_values("geo").isin(published) & (d.purchases_meur >= 50) & (d.total > 0))
+    j = pd.DataFrame({"inter": d.total[keep], "final": f6.total, "final_purchases": f6.purchases_meur}).dropna()
+    j = j[(j.final_purchases >= 50) & (j.final > 0)]
+    q = j.final / j.inter
+    g = q.index.get_level_values("sector").str[0].isin(list("ABC"))
+    report.append(f"| {y} | {len(q)} | {q[g].median():.2f} ({q[g].quantile(.1):.2f}-{q[g].quantile(.9):.2f}) | "
+                  f"{q[~g].median():.2f} ({q[~g].quantile(.1):.2f}-{q[~g].quantile(.9):.2f}) |")
+    j.assign(ratio=q).to_csv(VAL / f"6a_final_vs_intermediate_{y}.csv")
+last = years[-1]
+gb = [fac.loc[(last, "GB", "C13T15")].total, dem.loc[(last, "GB", "C13T15")].total, fin.loc[(last, "GB", "C13T15")].total]
+report += ["", f"United Kingdom, textiles (C13-15), {last}: supply {gb[0]:.0f}, demand weighted by business purchases "
+           f"{gb[1]:.0f}, by final purchases {gb[2]:.0f} kgCO2e/kEUR.", "",
+           "### 6b. Supply-chain layers (supply table rows, output above 50 MEUR)", "",
+           "Median share of the total: own operations f, tier 1 suppliers f A, tier 2 f A^2, tier 3 and beyond.", "",
+           "| year | n | own operations | tier 1 | tier 2 | tier 3+ | rows with tier 3+ above 25% |", "|---|---|---|---|---|---|---|"]
+for y in years:
+    t = fac.loc[y]
+    t = t[t.index.get_level_values("geo").isin(published) & (t.output_meur >= 50) & (t.total > 0)]
+    sh = t[["tier0", "tier1", "tier2", "tier3_plus"]].div(t.total, axis=0)
+    report.append(f"| {y} | {len(sh)} | {sh.tier0.median():.0%} | {sh.tier1.median():.0%} | {sh.tier2.median():.0%} | "
+                  f"{sh.tier3_plus.median():.0%} | {(sh.tier3_plus > .25).mean():.0%} |")
+t = fac.loc[last]
+t = t[t.index.get_level_values("geo").isin(published) & (t.output_meur >= 50) & (t.total > 0)]
+up = t.aviation_rf_extra / t.total
+air = t.index.get_level_values("sector") == "H51"
+report += ["", f"### 6c. Aviation radiative forcing ({last}, x1.7 on the direct CO2 of air transport H51)", "",
+           f"- Air transport (H51), {air.sum()} countries: total +{up[air].median():.0%} in median "
+           f"({up[air].min():.0%} to {up[air].max():.0%}).",
+           f"- Other industries: +{up[~air].median():.2%} in median, {(up[~air] > .01).mean():.1%} of rows above +1%, "
+           f"largest +{up[~air].max():.1%} ({up[~air].idxmax()[1]}, {up[~air].idxmax()[0]})."]
 
 (VAL / "validation_report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
 print("\n".join(report))
