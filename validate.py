@@ -1,4 +1,4 @@
-"""Three independent checks of the FIGARO factors. Writes results/<edition>/validation/.
+"""Checks of the FIGARO factors. Writes results/<edition>/validation/.
 
     python validate.py [edition]      (after build_factors.py, default 26ed)
 
@@ -9,6 +9,7 @@
  3. France, scopes 1-3 upstream: comparison with SDES/Insee table GES.501 (the values published as
     monetary ratios in ADEME Base Carbone), (a) pure FIGARO, (b) FIGARO import contents combined with
     the French national symmetric IOT, which approximates the 'simplified SNAC' method of the SDES.
+ 4. Country of demand: how far the demand factors move from the supply factors of the same country.
 """
 import sys
 from pathlib import Path
@@ -115,6 +116,26 @@ for y in years:
             t[f"ratio_{col}"] = q
             report.append(f"| {y} | {label} | {len(q)} | {q.median():.3f} | {share(q, .05)} | {share(q, .10)} | {share(q, .20)} |")
     t.to_csv(VAL / f"3_france_sdes_{y}.csv")
+
+# ---------------------------------------------------------------- 4. country of demand
+# The weighting identity (demand factors x purchases = emissions embodied in each region's intermediate
+# purchases) is asserted in build_factors.py; here, how far the demand view moves from the supply view.
+report += ["", "## 4. Country of demand vs country of supply (31 published countries, purchases above 50 MEUR)", "",
+           "Ratio = demand factor / supply factor of the same country and product, total scopes 1-3 upstream.", "",
+           "| year | n | median ratio | p10 | p90 | within 10% | median domestic share of purchases |",
+           "|---|---|---|---|---|---|---|"]
+dem = pd.read_csv(OUT / f"figaro_demand_factors_{EDITION}.csv").set_index(["year", "geo", "sector"])
+published = set(pd.read_csv(DATA / "countries.csv").code)
+for y in years:
+    d = dem.loc[y]
+    d = d[d.index.get_level_values("geo").isin(published) & (d.purchases_meur >= 50) & (d.total > 0)]
+    s = fac.loc[y].total.reindex(d.index)
+    ok = (s > 0) & (fac.loc[y].output_meur.reindex(d.index) >= 50)
+    q = (d.total / s)[ok]
+    pd.DataFrame({"demand": d.total, "supply": s, "ratio": d.total / s,
+                  "purchases_share_domestic": d.purchases_share_domestic}).to_csv(VAL / f"4_demand_vs_supply_{y}.csv")
+    report.append(f"| {y} | {len(q)} | {q.median():.3f} | {q.quantile(.1):.2f} | {q.quantile(.9):.2f} | "
+                  f"{share(q, .10)} | {d.purchases_share_domestic.median():.0%} |")
 
 (VAL / "validation_report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
 print("\n".join(report))
