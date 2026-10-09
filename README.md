@@ -47,6 +47,18 @@ product, 2014 to 2023. Same value columns, averaged over every country of origin
 
 Rows with purchases below 50 million EUR are left out.
 
+`results/figaro_final_demand_emission_factors_26ed.csv`: 17,709 rows, same layout as the demand table,
+weighted by the **final** purchases of the country (household, government and NPISH consumption, gross
+fixed capital formation; changes in inventories left out) instead of the intermediate consumption of
+its industries. `purchases_meur` is then final purchases.
+
+`results/figaro_supply_chain_details_26ed.csv`: 18,834 rows, one per row of the supply table, 2014 to 2023:
+
+| Column | Meaning |
+|---|---|
+| `share_own_operations`, `share_tier_1`, `share_tier_2`, `share_tier_3_plus` | split of the total by supply-chain layer: the industry itself, its direct suppliers, their suppliers, and beyond |
+| `total_with_aviation_rf` | total with the radiative forcing of aviation (direct CO2 of air transport x 1.7), optional |
+
 `results/figaro_purchaser_price_factors_26ed.csv`: 13,495 rows, one per year, purchasing country and
 product, 2014 to 2023, for the 26 countries that publish valuation matrices (see Purchaser prices).
 
@@ -84,6 +96,12 @@ Textiles, wearing apparel and leather (C13-15), 2023, kgCO2e per k EUR:
 - **Origin of the purchase known**: supply table, country of the supplier (or of the producer, for a
   reseller).
 - **Origin unknown**: demand table, country of the purchasing company.
+- **Business purchases or final purchases.** The demand table is weighted by what industries buy:
+  use it for production inputs and services. For finished goods or equipment bought as such (clothing,
+  vehicles, computers, furniture), whose origin mix follows consumer and investment purchases, the final
+  demand table is closer. The two are within a few percent for most products (median ratio 1.00 for
+  goods, 0.99 for services in 2023) and diverge for some imported finished goods: United Kingdom,
+  textiles, 2023, 391 weighted by business purchases, 553 by final purchases.
 - Retail trade (G47) is not a substitute: at basic prices it covers the trade margin only (shops,
   their energy and logistics), never the goods sold. A purchase at purchaser prices is the basic value
   of the goods (factor of the product) plus the trade and transport margins (factors of G and H) plus
@@ -149,7 +167,7 @@ Three differences explain most of the gaps between two factors for the "same" pu
 
 ## Method
 
-`figaro_core.py`, about 150 lines:
+`figaro_core.py`, about 200 lines:
 
 ```
 x  total output per (country, industry)            million EUR
@@ -175,6 +193,24 @@ demand(s, p)  = sum over origins r of w(r | s, p) x m(r, p)        same weights 
 The weights are business purchases (intermediate consumption), not household final demand. Every
 origin enters them, including rows left out of the supply table. `build_factors.py` checks that the
 demand factors times the purchases give back the emissions embodied in each country's purchases.
+
+### Final purchases, supply-chain layers, aviation
+
+- **Final purchases.** Same formula as the country of demand with the final purchases of s as weights:
+  consumption of households, government and NPISH and gross fixed capital formation (`P3_S13`,
+  `P3_S14`, `P3_S15`, `P51G`); changes in inventories (`P5M`) are left out, negative GFCF cells
+  (disposals) set to 0. `build_factors.py` checks that the factors times
+  the final purchases give back the emissions embodied in them.
+- **Supply-chain layers.** `m = f + f A + f A^2 + ...`: the industry's own emissions (f), those of its
+  direct suppliers (f A, scope 2 is part of it), of their suppliers (f A^2), and the rest. A process LCA
+  that stops after a few tiers misses the last layer (37 to 40% of the total in median): the split shows
+  where an input-output factor can complete it (hybrid LCA).
+- **Aviation radiative forcing.** Off by default, as in the GHG Protocol and the air emissions accounts.
+  `total_with_aviation_rf` multiplies the direct CO2 of air transport (H51) by 1.7, the central value of the
+  [UK DESNZ 2026 methodology](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting)
+  (paragraphs 2.10 and 8.39 to 8.43, CO2 only), along the whole chain: `(1.7 - 1) x f_CO2,H51 (I - A)^-1`.
+  The multiplier is indicative and uncertain (same source); report it separately, never instead of the
+  total.
 
 ### Purchaser prices
 
@@ -273,6 +309,10 @@ Reports in `results/<edition>/validation/`.
    goods is 0.91 to 0.92 times the basic-price factor in median (10% of rows below 0.79-0.80), 0.98 for
    services; the rebasing alone gives 0.85-0.86 for goods. Coverage by year and the two sensitivities are
    in the report.
+6. **Variants.** Final against business purchases: median ratio 1.00-1.01 for goods (10% of pairs above
+   1.11-1.14), 0.99 for services. Supply-chain layers in median: own operations 10-11%, tier 1 22-24%,
+   tier 2 21-22%, tier 3 and beyond 35-40%. Aviation radiative forcing in 2023: +51% in median on air
+   transport, +1% in median on the other industries (business travel), at most +46% (travel agencies).
 
 ### Why France is about 15% below Base Carbone
 
@@ -295,7 +335,8 @@ python build_factors.py --figaro-dir tables   # results/26ed/ (all 46 regions, n
 python build_purchaser_prices.py              # results/26ed/figaro_purchaser_prices_26ed.csv
 python validate.py                            # results/26ed/validation/
 python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv,
-                                              # figaro_purchaser_price_factors_26ed.csv
+                                              # figaro_final_demand_emission_factors_26ed.csv,
+                                              # figaro_supply_chain_details_26ed.csv, figaro_purchaser_price_factors_26ed.csv
 ```
 
 About 5 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
