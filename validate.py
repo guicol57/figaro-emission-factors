@@ -13,6 +13,8 @@
  5. Purchaser prices: coverage of the valuation matrices, accounting identity, size of the price wedge, and
     the sensitivity to the two approximations (margin services mix, VAT of exempt buyers).
  6. Variants: country of demand weighted by final purchases, supply-chain layers, aviation radiative forcing.
+ 7. Ground truth from outside the model: D35 against grid intensity / electricity price, C24 against steel
+    intensity / steel price. Reported as measured, the model is not tuned to them.
 """
 import sys
 from pathlib import Path
@@ -20,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from figaro_core import GEO_MAP, NACE_MAP
+from figaro_core import EU27, GEO_MAP, NACE_MAP
 
 HERE = Path(__file__).parent
 DATA = HERE / "data"
@@ -237,6 +239,62 @@ report += ["", f"### 6c. Aviation radiative forcing ({last}, x1.7 on the direct 
            f"({up[air].min():.0%} to {up[air].max():.0%}).",
            f"- Other industries: +{up[~air].median():.2%} in median, {(up[~air] > .01).mean():.1%} of rows above +1%, "
            f"largest +{up[~air].max():.1%} ({up[~air].idxmax()[1]}, {up[~air].idxmax()[0]})."]
+
+# ---------------------------------------------------------------- 7. ground truth
+GEO_E = {"EL": "GR", "UK": "GB"}
+price = pd.read_csv(DATA / "nrg_pc_205_non_household.csv")
+price["year"], price["geo"] = price.time.str[:4].astype(int), price.geo.replace(GEO_E)
+price = price.groupby(["geo", "year"]).value.mean()                      # EUR/kWh, mean of the two half-years
+peh = pd.read_csv(DATA / "nrg_bal_peh_main_activity.csv")
+peh["geo"] = peh.geo.replace(GEO_E)
+elec = peh[(peh.unit == "GWH") & peh.nrg_bal.str.startswith("GEP")].groupby(["geo", "time"]).value.sum()
+heat = peh[(peh.unit == "TJ") & peh.nrg_bal.str.startswith("GHP")].groupby(["geo", "time"]).value.sum() / 3.6
+gge = pd.read_csv(DATA / "env_air_gge_public_power.csv")
+gge["geo"] = gge.geo.replace(GEO_E)
+grid = gge.set_index(["geo", "time"]).value / (elec + heat.reindex(elec.index).fillna(0.0))   # kt/GWh = kg/kWh
+grid.index.names = ["geo", "year"]
+d35 = fac.xs("D35", level="sector").swaplevel().sort_index()
+c = pd.DataFrame({"scope1": d35.scope1, "total": d35.total, "grid_kg_kwh": grid, "price_eur_kwh": price}).dropna()
+c = c[c.index.get_level_values("geo").isin(published) & c.index.get_level_values("year").isin(years)]
+c["expected"] = c.grid_kg_kwh / c.price_eur_kwh * 1000.0
+c["ratio_scope1"], c["ratio_total"] = c.scope1 / c.expected, c.total / c.expected
+c.to_csv(VAL / "7_d35_electricity.csv")
+report += ["", "## 7. Ground truth from outside the model", "",
+           "### 7a. Electricity, gas, steam (D35) against grid intensity / electricity price", "",
+           "Expected kgCO2e per kEUR = emissions of public electricity and heat production (national inventories, "
+           "CRF 1.A.1.a, env_air_gge) / electricity and heat output of main-activity producers (nrg_bal_peh) / "
+           "non-household electricity price excluding taxes, all bands (nrg_pc_205, mean of the two half-years; "
+           "published for most countries from 2021).", "",
+           "| year | countries | direct factor / expected, median (min-max) | total factor / expected, median (min-max) |",
+           "|---|---|---|---|"]
+for y in sorted(set(c.index.get_level_values("year"))):
+    k = c.xs(y, level="year")
+    if len(k) < 10:
+        continue
+    report.append(f"| {y} | {len(k)} | {k.ratio_scope1.median():.2f} ({k.ratio_scope1.min():.2f}-{k.ratio_scope1.max():.2f}) | "
+                  f"{k.ratio_total.median():.2f} ({k.ratio_total.min():.2f}-{k.ratio_total.max():.2f}) |")
+ws = pd.read_csv(DATA / "worldsteel_co2_intensity.csv").set_index("year").t_co2_per_t_crude_steel
+cx = pd.read_csv(DATA / "comext_steel_exports.csv", dtype={"product": str})
+cx = cx.pivot_table(index=["product", "time"], columns="indicators", values="value", aggfunc="sum")
+unit_value = cx.VALUE_IN_EUROS / (cx.QUANTITY_IN_100KG / 10.0)          # EUR per tonne, EU exports to the world
+c24 = fac.xs("C24", level="sector")
+report += ["", "### 7b. Basic metals (C24) against steel intensity / steel price", "",
+           "Expected kgCO2 per kEUR = worldsteel world CO2 intensity of crude steel / unit value of EU steel exports "
+           "(Comext, all EU reporters, to all partners): iron and steel (HS 72) or hot-rolled flat products (HS 7208). "
+           "FIGARO total of C24, EU countries with a C24 output above 1 billion EUR.", "",
+           "| year | tCO2/t | EUR/t HS 72 | EUR/t HS 7208 | expected (HS 72 / HS 7208) | countries | FIGARO total, median (min-max) | ratio to HS 72, median |",
+           "|---|---|---|---|---|---|---|---|"]
+rows7 = []
+for y in ws.index:
+    if y not in years:
+        continue
+    e72, e08 = ws[y] * 1e6 / unit_value[("72", y)], ws[y] * 1e6 / unit_value[("7208", y)]
+    k = c24.loc[y]
+    k = k[k.index.isin(EU27) & (k.output_meur >= 1000)]
+    rows7.append(pd.DataFrame({"year": y, "figaro_total": k.total, "expected_hs72": e72, "expected_hs7208": e08}))
+    report.append(f"| {y} | {ws[y]} | {unit_value[('72', y)]:.0f} | {unit_value[('7208', y)]:.0f} | {e72:.0f} / {e08:.0f} | "
+                  f"{len(k)} | {k.total.median():.0f} ({k.total.min():.0f}-{k.total.max():.0f}) | {(k.total / e72).median():.2f} |")
+pd.concat(rows7).to_csv(VAL / "7_c24_steel.csv")
 
 (VAL / "validation_report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
 print("\n".join(report))
