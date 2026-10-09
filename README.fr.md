@@ -5,7 +5,9 @@
 Facteurs d'émission de gaz à effet de serre par euro dépensé, pour 31 pays européens et 62 branches
 d'activité, calculés à partir des tableaux entrées-sorties inter-pays FIGARO d'Eurostat et des
 comptes d'émissions qu'Eurostat utilise pour ses empreintes officielles. Scopes 1, 2 et 3 amont, en
-kgCO2e par k€ de production.
+kgCO2e par k€ de production, selon deux vues : le pays de **production** (où les biens ou services
+sont produits) et le pays de **demande** (ce qu'un pays achète réellement, production nationale et
+importations).
 
 Ce dépôt contient tout le calcul : scripts, extraits de données, résultats et contrôles. Il est
 maintenu par [Ecodex](https://getecodex.com), qui publie ces facteurs au sein de la source « Eurostat ».
@@ -34,17 +36,57 @@ euros courants de l'année, principe de résidence, consommations intermédiaire
 Pays : UE27, Norvège, Suisse, Royaume-Uni, Turquie. Les branches T et U et les lignes dont la
 production est inférieure à 50 M€ sont écartées.
 
+`results/figaro_demand_emission_factors_26ed.csv` : 18 465 lignes, une par année, pays acheteur et
+produit, 2014 à 2023. Mêmes colonnes de valeurs, moyennées sur tous les pays d'origine, plus :
+
+| Colonne | Signification |
+|---|---|
+| `purchases_meur` | consommation intermédiaire du produit par les branches du pays, en M€ |
+| `purchases_share_domestic`, `purchases_share_other_eu27`, `purchases_share_rest_of_world` | provenance de ces achats |
+| `total_share_domestic`, `total_share_other_eu27`, `total_share_rest_of_world` | lieu d'émission du total, vu du pays acheteur |
+
+Les lignes dont les achats sont inférieurs à 50 M€ sont écartées.
+
 ## Quand utiliser ces facteurs
 
 Un facteur monétaire est une solution de repli : un facteur physique (par kg, kWh, km) ou une
 donnée propre au fournisseur est toujours préférable quand l'achat peut être décrit ainsi. Quand
 seul un montant est connu, la bonne base dépend de ce qui a été acheté et de l'endroit.
 
+### Pays de production ou pays de demande
+
+Le facteur de production d'un pays porte sur 1 k€ produit dans ce pays. Le facteur de demande porte
+sur 1 k€ de ce que les branches de ce pays achètent du produit, toutes origines confondues : c'est la
+moyenne des facteurs de production de toutes les origines, pondérée par les achats réels.
+
+Textile, habillement et cuir (C13-15), 2023, kgCO2e par k€ :
+
+| | Facteur | |
+|---|---|---|
+| France, pays de production | 205 | fabriqué en France |
+| France, pays de demande | 369 | 36 % acheté en France, 30 % dans le reste de l'UE, 34 % hors UE |
+| Chine, pays de production | 724 | |
+| Inde, pays de production | 1 347 | |
+
+- **Origine de l'achat connue** : table de production, pays du fournisseur (ou du fabricant, pour un
+  revendeur).
+- **Origine inconnue** : table de demande, pays de l'entreprise acheteuse.
+- Le commerce de détail (G47) n'est pas un substitut : au prix de base il ne couvre que la marge
+  commerciale (magasins, leur énergie et leur logistique), jamais les biens vendus. Un achat au prix
+  d'achat se décompose en valeur des biens au prix de base (facteur du produit) et marge commerciale
+  (facteur de G47).
+
+Les deux vues sont proches pour les services, achetés surtout localement (2023 : écart médian de
+3 %, deux couples sur trois à 10 % près), et s'écartent pour les biens (écart médian de 11 %, 42 % à
+10 % près), surtout importés : textile, électronique, chimie, métaux, produits des industries
+extractives.
+
 ### Quelle base monétaire pour quel achat
 
 | Votre achat | Premier choix | Pourquoi |
 |---|---|---|
 | Services, frais généraux ou dépenses non détaillées auprès d'un fournisseur européen | **FIGARO** | Propre à chaque pays, récent, traçable jusqu'aux statistiques officielles |
+| Un achat européen dont le pays d'origine est inconnu | **FIGARO**, pays de demande | Moyenne de toutes les origines, pondérée par ce que le pays achète réellement |
 | Besoin de séparer les scopes 1 + 2 du scope 3 amont, ou de connaître la part émise hors UE | **FIGARO** | La seule de ces bases à fournir les deux décompositions |
 | Un produit manufacturé, agricole ou chimique précis, tout pays | **CEDA** | 400 secteurs : ciment, élevage ou acier ne sont pas dilués dans une branche large |
 | Fournisseur hors d'Europe (Asie, Amériques, Afrique, Moyen-Orient) | **CEDA** | 149 pays |
@@ -96,7 +138,7 @@ Trois différences expliquent l'essentiel des écarts entre deux facteurs pour l
 
 ## Méthode
 
-`figaro_core.py`, une centaine de lignes :
+`figaro_core.py`, environ 150 lignes :
 
 ```
 x  production par (pays, branche)                  M€
@@ -110,6 +152,19 @@ scope 3 amont  = m - scope 1 - scope 2
 
 La part CO2 est le même calcul avec les seules émissions de CO2. Le lieu d'émission regroupe les
 lignes de `f (I - A)^-1` par pays émetteur.
+
+Pays de demande, pour un pays acheteur s et un produit p :
+
+```
+w(r | s, p)   = part de l'origine r dans les achats intermédiaires de p par les branches de s
+                (flux FIGARO, nationaux et importés)
+demande(s, p) = somme sur les origines r de w(r | s, p) x m(r, p)     mêmes poids pour chaque scope
+```
+
+Les poids sont les achats des entreprises (consommations intermédiaires), pas la demande finale des
+ménages. Toutes les origines y entrent, y compris les lignes écartées de la table de production.
+`build_factors.py` vérifie que les facteurs de demande multipliés par les achats redonnent les
+émissions contenues dans les achats de chaque pays.
 
 ### Données d'entrée
 
@@ -164,6 +219,10 @@ Rapports dans `results/<édition>/validation/`.
    - contenus importés FIGARO combinés au tableau entrées-sorties national français, ce qui
      approche la méthode du SDES : médiane de 0,94 à 0,96, 54 à 79 % des branches à 10 % près (2019 à 2022).
 
+4. **Pays de demande.** Par rapport au facteur de production du même pays et du même produit : ratio
+   médian de 1,04 à 1,05 selon l'année, 10 % des couples sous 0,93-0,95, 10 % au-dessus de
+   1,37-1,45. Les plus forts pour les biens importés (textile 1,39, industries extractives 1,59 en 2023).
+
 ### Pourquoi la France est environ 15 % sous la Base Carbone
 
 Les émissions directes françaises sont les mêmes des deux côtés. Le SDES remplace le bloc France de
@@ -183,7 +242,7 @@ pip install -r requirements.txt
 python fetch_eurostat.py --tables tables      # extraits Eurostat dans data/, tableaux FIGARO dans tables/
 python build_factors.py --figaro-dir tables   # results/26ed/ (46 régions, non versionné)
 python validate.py                            # results/26ed/validation/
-python build_results.py                       # results/figaro_emission_factors_26ed.csv
+python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv
 ```
 
 Environ 5 minutes et 4 Go de mémoire une fois les tableaux téléchargés. Eurostat écrase ses jeux de
@@ -197,6 +256,10 @@ extraits versionnés dans `data/` sont ceux des résultats publiés.
 - Les petits pays et les petites branches donnent des ratios instables malgré le seuil de 50 M€.
 - Seule la distinction CO2 / autres gaz est possible sur toute la chaîne.
 - Le scope 2 est en approche géographique et de premier rang ; D35 regroupe électricité, gaz et vapeur.
+- Pays de demande : la répartition par origine est celle de FIGARO, qui sous-représente les biens
+  importés par les branches françaises (voir plus haut) ; les facteurs de demande français des biens
+  sont donc probablement un peu bas. Le reste du monde forme un seul bloc, avec un facteur par
+  branche. Le mix d'achat d'une entreprise donnée peut s'écarter de la moyenne de son pays.
 
 ## Licence et attribution
 

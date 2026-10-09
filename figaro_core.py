@@ -17,6 +17,14 @@ Scope split of m for sector j:
   scope 2        = sum over regions r of f_(r,D35) * A[(r,D35), j]
                    (direct emissions of the electricity, gas, steam suppliers, first tier)
   scope 3 upstream = m_j - scope 1 - scope 2
+
+Country of demand (demand_factors)
+  The factors above follow the country of SUPPLY: 1 EUR of output of industry j produced in region r.
+  When the origin of a purchase is unknown, the factor of the country of DEMAND averages the supply
+  factors of every origin r, weighted by what the industries of the purchasing region s buy of
+  product p from r (intermediate consumption, FIGARO flows):
+    w(r | s, p)  = sum_k Z[(r, p), (s, k)] / sum_r' sum_k Z[(r', p), (s, k)]
+    demand(s, p) = sum_r w(r | s, p) * m(r, p)           (the same for every scope)
 """
 from __future__ import annotations
 
@@ -100,11 +108,14 @@ def load_aea(path: str, year: int) -> pd.Series:
     return df.groupby(["geo", "sector"]).value.first()
 
 
-def leontief(z: pd.DataFrame, x: pd.Series, e: pd.Series, e_co2: pd.Series | None = None) -> pd.DataFrame:
+def leontief(z: pd.DataFrame, x: pd.Series, e: pd.Series, e_co2: pd.Series | None = None,
+             origin: bool = False) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     """Total, scope 1, scope 2 and scope 3 upstream intensities (kgCO2e/EUR), with
     - the CO2-only part of each (when e_co2 is given),
     - the part emitted in the producing country (_dom) and in the other EU27 countries (_eu) for the
-      total and for scopes 1 + 2 (the remainder is emitted outside the EU)."""
+      total and for scopes 1 + 2 (the remainder is emitted outside the EU).
+    With origin=True, also returns the total intensity split by emitting country (countries x rows),
+    used by demand_factors."""
     e = e.reindex(z.index)
     missing = e[e.isna()]
     assert missing.empty, f"no emissions for {list(missing.index[:5])}"
@@ -137,4 +148,39 @@ def leontief(z: pd.DataFrame, x: pd.Series, e: pd.Series, e_co2: pd.Series | Non
     out["total_eu"] = in_eu @ fl - dom_total * in_eu         # other EU27 countries
     out["s12_dom"] = f + dom_s2
     out["s12_eu"] = in_eu @ fa - dom_s2 * in_eu
+    if origin:
+        return out, pd.DataFrame(same @ fl, index=codes, columns=z.index)
     return out
+
+
+DEMAND_COLS = ("scope1", "scope2", "scope3_upstream", "total", "scope1_co2", "scope2_co2", "total_co2")
+
+
+def demand_factors(z: pd.DataFrame, res: pd.DataFrame, by_geo: pd.DataFrame, purchasers) -> pd.DataFrame:
+    """Factors of the country of demand, per (purchasing region, product), from the supply factors `res`
+    and their split by emitting country `by_geo` (both from leontief(..., origin=True)).
+
+    Columns: intermediate purchases (M EUR) and their origin (domestic / other EU27), the purchase-
+    weighted average of every scope, and where the emissions of the total occur seen from the purchasing
+    country (_dom = in the purchasing country, _eu = other EU27 countries, remainder outside the EU)."""
+    col_geo = z.columns.get_level_values("geo")
+    row_geo = z.index.get_level_values("geo").to_numpy()
+    sector = z.index.get_level_values("sector")
+    cols = [c for c in DEMAND_COLS if c in res]
+    other_eu = np.isin(row_geo, list(EU27))
+    frames = []
+    for s in purchasers:
+        u = z.loc[:, col_geo == s].sum(axis=1)                  # what region s buys of each (origin, product)
+        tot = u.groupby(level="sector", sort=False).sum()
+        w = (u / tot.reindex(sector).to_numpy()).fillna(0.0)    # origin weights within each product
+        d = res[cols].mul(w, axis=0).groupby(level="sector", sort=False).sum()
+        emit = by_geo.mul(w, axis=1).T.groupby(level="sector", sort=False).sum()   # products x emitting countries
+        d["total_dom"] = emit[s] if s in emit else 0.0
+        d["total_eu"] = emit[[c for c in emit.columns if c in EU27 and c != s]].sum(axis=1)
+        d["purchases_meur"] = tot
+        d["purchases_share_domestic"] = u[row_geo == s].groupby(level="sector", sort=False).sum() / tot
+        d["purchases_share_other_eu27"] = (u[other_eu & (row_geo != s)].groupby(level="sector", sort=False).sum()
+                                           / tot)
+        d.insert(0, "geo", s)
+        frames.append(d[tot > 0].reset_index())
+    return pd.concat(frames, ignore_index=True)

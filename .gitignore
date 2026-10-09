@@ -4,3 +4,4 @@ tables/
 results/*/figaro_factors_*.csv
 results/*/final_demand_*.csv
 results/*/import_mix_*.csv
+results/*/figaro_demand_factors_*.csv

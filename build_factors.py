@@ -6,15 +6,19 @@ Reads the industry-by-industry inter-country IOT (matrix or flat CSV) and the di
 emissions extract (data/env_ac_ghgfp_direct_emissions.csv). Writes, per year:
   results/<edition>/figaro_factors_<edition>.csv   all 46 regions, kgCO2e per thousand EUR of output
                                                   (basic prices, current prices) - not committed
+  results/<edition>/figaro_demand_factors_<edition>.csv  factors of the country of demand: supply factors
+                                                  weighted by the origin of each region's intermediate
+                                                  purchases (complete years only) - not committed
   results/<edition>/final_demand_<year>.csv       final demand by country of final use (validate.py)
   results/<edition>/import_mix_FR_<year>.csv      origin mix of French intermediate imports (validate.py)
 """
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
-from figaro_core import leontief, load_aea, load_emissions, load_iot
+from figaro_core import demand_factors, leontief, load_aea, load_emissions, load_iot
 
 HERE = Path(__file__).parent
 
@@ -38,21 +42,32 @@ if __name__ == "__main__":
     a = ap.parse_args()
     out = HERE / "results" / a.edition
     out.mkdir(parents=True, exist_ok=True)
-    frames = []
+    frames, demand = [], []
     for year in a.years:
         path, flat = find_table(Path(a.figaro_dir), year, a.edition)
         z, x, y = load_iot(str(path), flat)
         e = load_emissions(str(HERE / "data" / "env_ac_ghgfp_direct_emissions.csv"), year)
         e_co2 = load_emissions(str(HERE / "data" / "env_ac_co2fp_direct_emissions.csv"), year)
-        res = leontief(z, x, e, e_co2)
+        res, by_geo = leontief(z, x, e, e_co2, origin=True)
         # accounting identity: emissions embodied in world final demand == world direct emissions
         embodied = float((y.sum(axis=1) * res.total).sum())
         assert abs(embodied / res.emissions_kt.sum() - 1) < 1e-6, "Leontief identity broken"
         y.to_csv(out / f"final_demand_{year}.csv")
         fr = z.columns.get_level_values("geo") == "FR"
         z.loc[z.index.get_level_values("geo") != "FR", fr].sum(axis=1).rename("meur").to_csv(out / f"import_mix_FR_{year}.csv")
+        dem = demand_factors(z, res, by_geo, list(dict.fromkeys(z.columns.get_level_values("geo"))))
+        # identity: demand factors x purchases == emissions embodied in each region's intermediate purchases
+        embodied_ci = z.T.groupby(level="geo").sum().T.mul(res.total, axis=0).sum()
+        weighted = (dem.total * dem.purchases_meur).groupby(dem.geo).sum().reindex(embodied_ci.index)
+        assert np.allclose(weighted, embodied_ci, rtol=1e-9), "demand weighting broken"
+        origin_sum = (dem.total_dom + dem.total_eu) <= dem.total * (1 + 1e-9)
+        assert origin_sum.all(), "place of emission exceeds the total"
         for c in res.columns.drop(["output_meur", "emissions_kt"]):
             res[c] *= 1000.0  # kg/EUR -> kg/kEUR
+        for c in [c for c in dem.columns if c.startswith(("scope", "total"))]:
+            dem[c] *= 1000.0
+        dem.insert(0, "year", year)
+        demand.append(dem)
         res.insert(0, "year", year)
         frames.append(res.reset_index())
         print(year, path.name, f"world emissions {res.emissions_kt.sum()/1e6:.2f} Gt, identity ok")
@@ -85,3 +100,4 @@ if __name__ == "__main__":
         frames.append(res.reset_index())
         print(py, path.name, f"provisional, scopes 1 + 2 only, {len(res)} rows with published accounts")
     pd.concat(frames).to_csv(out / f"figaro_factors_{a.edition}.csv", index=False)
+    pd.concat(demand).to_csv(out / f"figaro_demand_factors_{a.edition}.csv", index=False)

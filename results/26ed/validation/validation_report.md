@@ -45,3 +45,20 @@ Sectors with output above 50 MEUR, countries reporting AEA to Eurostat.
 | 2022 | pure FIGARO | 63 | 0.863 | 14% | 24% | 73% |
 | 2022 | FIGARO imports + French national IOT (SNAC approx.) | 63 | 0.962 | 43% | 70% | 95% |
 | 2023 | pure FIGARO | 63 | 0.823 | 10% | 14% | 65% |
+
+## 4. Country of demand vs country of supply (31 published countries, purchases above 50 MEUR)
+
+Ratio = demand factor / supply factor of the same country and product, total scopes 1-3 upstream.
+
+| year | n | median ratio | p10 | p90 | within 10% | median domestic share of purchases |
+|---|---|---|---|---|---|---|
+| 2014 | 1804 | 1.038 | 0.93 | 1.37 | 59% | 80% |
+| 2015 | 1813 | 1.036 | 0.93 | 1.38 | 59% | 79% |
+| 2016 | 1816 | 1.035 | 0.93 | 1.37 | 58% | 79% |
+| 2017 | 1820 | 1.037 | 0.93 | 1.38 | 60% | 78% |
+| 2018 | 1830 | 1.039 | 0.93 | 1.40 | 59% | 77% |
+| 2019 | 1834 | 1.035 | 0.94 | 1.40 | 60% | 77% |
+| 2020 | 1826 | 1.036 | 0.93 | 1.42 | 59% | 77% |
+| 2021 | 1841 | 1.040 | 0.93 | 1.45 | 58% | 76% |
+| 2022 | 1855 | 1.043 | 0.93 | 1.43 | 56% | 74% |
+| 2023 | 1857 | 1.050 | 0.95 | 1.45 | 55% | 76% |

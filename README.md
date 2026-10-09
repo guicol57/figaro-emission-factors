@@ -4,7 +4,9 @@
 
 Spend-based greenhouse gas emission factors for 31 European countries and 62 industries, computed
 from Eurostat's FIGARO inter-country input-output tables and the emission accounts Eurostat uses
-for its official footprints. Scopes 1, 2 and 3 upstream, in kgCO2e per thousand EUR of output.
+for its official footprints. Scopes 1, 2 and 3 upstream, in kgCO2e per thousand EUR of output, in
+two views: the country of **supply** (where the goods or services are produced) and the country of
+**demand** (the mix a country actually buys, domestic and imported).
 
 This repository holds the full calculation: scripts, input extracts, results and checks.
 Maintained by [Ecodex](https://getecodex.com), where the factors are published within the source "Eurostat".
@@ -33,17 +35,55 @@ European air emissions accounts (CH4 = 28, N2O = 265).
 Countries: EU27, Norway, Switzerland, United Kingdom, Turkey. Industries T and U and rows with an
 output below 50 million EUR are left out.
 
+`results/figaro_demand_emission_factors_26ed.csv`: 18,465 rows, one per year, purchasing country and
+product, 2014 to 2023. Same value columns, averaged over every country of origin, plus:
+
+| Column | Meaning |
+|---|---|
+| `purchases_meur` | intermediate consumption of the product by the industries of the country, million EUR |
+| `purchases_share_domestic`, `purchases_share_other_eu27`, `purchases_share_rest_of_world` | where those purchases come from |
+| `total_share_domestic`, `total_share_other_eu27`, `total_share_rest_of_world` | place of emission of the total, seen from the purchasing country |
+
+Rows with purchases below 50 million EUR are left out.
+
 ## When to use these factors
 
 A spend-based factor is a fallback: a physical factor (per kg, kWh, km) or supplier-specific data
 is always better when the purchase can be described that way. When only an amount is known, the
 right database depends on what was bought and where.
 
+### Country of supply or country of demand
+
+The supply factor of a country covers 1 k EUR of output produced in that country. The demand factor
+covers 1 k EUR of what the industries of that country buy of the product, from every origin: it is
+the average of the supply factors of all origins, weighted by the actual purchases.
+
+Textiles, wearing apparel and leather (C13-15), 2023, kgCO2e per k EUR:
+
+| | Factor | |
+|---|---|---|
+| France as country of supply | 205 | made in France |
+| France as country of demand | 369 | 36% bought in France, 30% in the rest of the EU, 34% outside the EU |
+| China as country of supply | 724 | |
+| India as country of supply | 1,347 | |
+
+- **Origin of the purchase known**: supply table, country of the supplier (or of the producer, for a
+  reseller).
+- **Origin unknown**: demand table, country of the purchasing company.
+- Retail trade (G47) is not a substitute: at basic prices it covers the trade margin only (shops,
+  their energy and logistics), never the goods sold. A purchase at purchaser prices is the basic value
+  of the goods (factor of the product) plus the trade margin (factor of G47).
+
+The two views are close for services, mostly bought locally (2023: median gap 3%, two thirds of the
+pairs within 10%), and diverge for goods (median gap 11%, 42% within 10%), most of all for imported
+ones: textiles, electronics, chemicals, metals, mining products.
+
 ### Which spend-based database for which purchase
 
 | Your purchase | First choice | Why |
 |---|---|---|
 | Services, overheads or undetailed spend with a European supplier | **FIGARO** | Country-specific, recent, traceable to official statistics |
+| A European purchase whose country of origin is unknown | **FIGARO**, country of demand | Average of every origin, weighted by what the country actually buys |
 | You need scopes 1 + 2 separated from scope 3 upstream, or the share emitted outside the EU | **FIGARO** | The only one of these databases giving both splits |
 | A specific manufactured, agricultural or chemical product, any country | **CEDA** | 400 sectors: cement, cattle or steel are not diluted in a broad industry |
 | Supplier outside Europe (Asia, Americas, Africa, Middle East) | **CEDA** | 149 countries |
@@ -91,7 +131,7 @@ Three differences explain most of the gaps between two factors for the "same" pu
 
 ## Method
 
-`figaro_core.py`, about 100 lines:
+`figaro_core.py`, about 150 lines:
 
 ```
 x  total output per (country, industry)            million EUR
@@ -105,6 +145,18 @@ scope 3 upstream = m - scope 1 - scope 2
 
 The CO2 part is the same calculation with CO2 emissions alone. The place of emission groups the
 rows of `f (I - A)^-1` by emitting country.
+
+Country of demand, for a purchasing country s and a product p:
+
+```
+w(r | s, p)   = share of origin r in the intermediate purchases of p by the industries of s
+                (FIGARO flows, domestic and imported)
+demand(s, p)  = sum over origins r of w(r | s, p) x m(r, p)        same weights for every scope
+```
+
+The weights are business purchases (intermediate consumption), not household final demand. Every
+origin enters them, including rows left out of the supply table. `build_factors.py` checks that the
+demand factors times the purchases give back the emissions embodied in each country's purchases.
 
 ### Inputs
 
@@ -155,6 +207,10 @@ Reports in `results/<edition>/validation/`.
    - FIGARO import contents combined with the French national input-output table, which
      approximates the method of the SDES: median 0.94 to 0.96, 54 to 79% of industries within 10% (2019 to 2022).
 
+4. **Country of demand.** Against the supply factor of the same country and product: median ratio
+   1.04 to 1.05 depending on the year, 10% of pairs below 0.93-0.95, 10% above 1.37-1.45. Highest
+   for imported goods (textiles 1.39, mining products 1.59 in 2023).
+
 ### Why France is about 15% below Base Carbone
 
 Direct French emissions are the same on both sides. The SDES replaces the French block of FIGARO
@@ -174,7 +230,7 @@ pip install -r requirements.txt
 python fetch_eurostat.py --tables tables      # Eurostat extracts into data/, FIGARO tables into tables/
 python build_factors.py --figaro-dir tables   # results/26ed/ (all 46 regions, not committed)
 python validate.py                            # results/26ed/validation/
-python build_results.py                       # results/figaro_emission_factors_26ed.csv
+python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv
 ```
 
 About 5 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
@@ -188,6 +244,10 @@ in place: rerunning `fetch_eurostat.py` later may return revised data; the extra
 - Small countries and small industries give unstable ratios despite the 50 million EUR threshold.
 - Only CO2 against other gases can be separated along the whole chain.
 - Scope 2 is location-based and first tier; D35 pools electricity, gas and steam.
+- Country of demand: the origin mix is FIGARO's, which under-represents the imported goods of French
+  industries (see above), so French demand factors of goods are probably on the low side. The rest of
+  the world is one block with one factor per industry. The mix of a given company can differ from
+  the average of its country.
 
 ## Licence and attribution
 
