@@ -13,12 +13,17 @@ Selection rules
 The last year is provisional: scopes 1 + 2 only (total and scope 3 upstream are empty), for the
 countries whose air emissions accounts are already published.
 
-Also writes results/figaro_demand_emission_factors_<edition>.csv: the factors of the country of demand,
-one row per (year, purchasing country, product), complete years only.
+Also writes, complete years only:
+- results/figaro_demand_emission_factors_<edition>.csv: the factors of the country of demand, weighted by
+  business purchases, one row per (year, purchasing country, product);
+- results/figaro_final_demand_emission_factors_<edition>.csv: the same, weighted by final purchases;
+- results/figaro_supply_chain_details_<edition>.csv: supply-chain layers and aviation radiative forcing;
+- results/figaro_purchaser_price_factors_<edition>.csv: the demand factors at purchaser prices.
 """
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).parent
@@ -63,36 +68,64 @@ print(path.name, len(out), "rows |", out.country_code.nunique(), "countries |", 
 # ---------------------------------------------------------------- country of demand
 # Same selection rules, the 50 million EUR threshold applying to the purchases of the country.
 # Every origin enters the weights, including the rows left out of the table above.
-dem = pd.read_csv(HERE / "results" / EDITION / f"figaro_demand_factors_{EDITION}.csv")
-d = dem[dem.geo.isin(geo.index) & (dem.purchases_meur >= MIN_OUTPUT_MEUR) & (dem.total > 0)
-        & ~dem.sector.isin(EXCLUDED_SECTORS)].copy()
-d_s12, d_s12_co2 = d.scope1 + d.scope2, d.scope1_co2 + d.scope2_co2
-dout = pd.DataFrame({
-    "year": d.year, "country_code": d.geo, "country": d.geo.map(geo.name_en),
-    "nace_code": d.sector, "product": d.sector.map(nace.name_en),
-    # intermediate consumption of the product by the industries of the country, and where it comes from
-    "purchases_meur": d.purchases_meur.round(1),
-    "purchases_share_domestic": d.purchases_share_domestic,
-    "purchases_share_other_eu27": d.purchases_share_other_eu27,
-    "purchases_share_rest_of_world": 1 - d.purchases_share_domestic - d.purchases_share_other_eu27,
-    # kgCO2e per thousand EUR, purchase-weighted average of the supply factors of every origin
-    "total_scopes_1_2_3_upstream": d.total, "scopes_1_2": d_s12, "scope_3_upstream": d.scope3_upstream,
-    "scope_1": d.scope1, "scope_2": d.scope2,
-    "total_co2": d.total_co2, "scopes_1_2_co2": d_s12_co2, "scope_3_upstream_co2": d.total_co2 - d_s12_co2,
-    # place of emission of the total, seen from the purchasing country
-    "total_share_domestic": d.total_dom / d.total, "total_share_other_eu27": d.total_eu / d.total,
-    "total_share_rest_of_world": 1 - (d.total_dom + d.total_eu) / d.total,
+def demand_table(kind: str) -> pd.DataFrame:
+    """kind = "demand" (intermediate consumption of the industries) or "final_demand" (consumption and
+    gross fixed capital formation)."""
+    dem = pd.read_csv(HERE / "results" / EDITION / f"figaro_{kind}_factors_{EDITION}.csv")
+    d = dem[dem.geo.isin(geo.index) & (dem.purchases_meur >= MIN_OUTPUT_MEUR) & (dem.total > 0)
+            & ~dem.sector.isin(EXCLUDED_SECTORS)].copy()
+    d_s12, d_s12_co2 = d.scope1 + d.scope2, d.scope1_co2 + d.scope2_co2
+    dout = pd.DataFrame({
+        "year": d.year, "country_code": d.geo, "country": d.geo.map(geo.name_en),
+        "nace_code": d.sector, "product": d.sector.map(nace.name_en),
+        # purchases of the product by the country (intermediate or final), and where they come from
+        "purchases_meur": d.purchases_meur.round(1),
+        "purchases_share_domestic": d.purchases_share_domestic,
+        "purchases_share_other_eu27": d.purchases_share_other_eu27,
+        "purchases_share_rest_of_world": 1 - d.purchases_share_domestic - d.purchases_share_other_eu27,
+        # kgCO2e per thousand EUR, purchase-weighted average of the supply factors of every origin
+        "total_scopes_1_2_3_upstream": d.total, "scopes_1_2": d_s12, "scope_3_upstream": d.scope3_upstream,
+        "scope_1": d.scope1, "scope_2": d.scope2,
+        "total_co2": d.total_co2, "scopes_1_2_co2": d_s12_co2, "scope_3_upstream_co2": d.total_co2 - d_s12_co2,
+        # place of emission of the total, seen from the purchasing country
+        "total_share_domestic": d.total_dom / d.total, "total_share_other_eu27": d.total_eu / d.total,
+        "total_share_rest_of_world": 1 - (d.total_dom + d.total_eu) / d.total,
+    })
+    value_cols = [c for c in dout.columns if c.startswith(("total_s", "scope", "total_co2"))]
+    dout[value_cols] = dout[value_cols].clip(lower=0).round(2)
+    share_cols = [c for c in dout.columns if "share" in c]
+    dout[share_cols] = dout[share_cols].clip(0, 1).round(3)
+    assert not dout.duplicated(["year", "country_code", "nace_code"]).any()
+    assert (dout.total_co2 <= dout.total_scopes_1_2_3_upstream + 0.01).all()
+    name = {"demand": "demand", "final_demand": "final_demand"}[kind]
+    path = HERE / "results" / f"figaro_{name}_emission_factors_{EDITION}.csv"
+    dout.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
+    print(path.name, len(dout), "rows |", dout.country_code.nunique(), "countries |", dout.nace_code.nunique(),
+          "products |", sorted(dout.year.unique()))
+    return dout
+
+
+dout = demand_table("demand")
+demand_table("final_demand")
+
+# ---------------------------------------------------------------- supply chain details
+# Rows of the supply table, complete years: supply-chain layers of the total (for hybrid LCA and
+# truncation checks) and the total with the radiative forcing of aviation (optional, default without).
+full_rows = f[f.total.notna()]
+det = pd.DataFrame({
+    "year": full_rows.year, "country_code": full_rows.geo, "nace_code": full_rows.sector,
+    "total_scopes_1_2_3_upstream": full_rows.total.round(2),
+    "share_own_operations": full_rows.tier0 / full_rows.total, "share_tier_1": full_rows.tier1 / full_rows.total,
+    "share_tier_2": full_rows.tier2 / full_rows.total, "share_tier_3_plus": full_rows.tier3_plus / full_rows.total,
+    # kgCO2e per thousand EUR, direct CO2 of air transport (H51) x 1.7 along the whole chain
+    "total_with_aviation_rf": (full_rows.total + full_rows.aviation_rf_extra).round(2),
 })
-value_cols = [c for c in dout.columns if c.startswith(("total_s", "scope", "total_co2"))]
-dout[value_cols] = dout[value_cols].clip(lower=0).round(2)
-share_cols = [c for c in dout.columns if "share" in c]
-dout[share_cols] = dout[share_cols].clip(0, 1).round(3)
-assert not dout.duplicated(["year", "country_code", "nace_code"]).any()
-assert (dout.total_co2 <= dout.total_scopes_1_2_3_upstream + 0.01).all()
-path = HERE / "results" / f"figaro_demand_emission_factors_{EDITION}.csv"
-dout.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
-print(path.name, len(dout), "rows |", dout.country_code.nunique(), "countries |", dout.nace_code.nunique(),
-      "products |", sorted(dout.year.unique()))
+det[[c for c in det.columns if c.startswith("share")]] = det[[c for c in det.columns if c.startswith("share")]].round(4)
+assert np.allclose(det.filter(like="share").sum(axis=1), 1, atol=1e-3)
+assert (det.total_with_aviation_rf >= det.total_scopes_1_2_3_upstream).all()
+path = HERE / "results" / f"figaro_supply_chain_details_{EDITION}.csv"
+det.sort_values(["year", "country_code", "nace_code"]).to_csv(path, index=False)
+print(path.name, len(det), "rows |", sorted(det.year.unique()))
 
 # ---------------------------------------------------------------- purchaser prices
 # Rows of the country-of-demand table above whose purchasing country publishes valuation matrices (within

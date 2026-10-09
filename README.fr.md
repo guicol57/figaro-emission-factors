@@ -47,6 +47,19 @@ produit, 2014 à 2023. Mêmes colonnes de valeurs, moyennées sur tous les pays 
 
 Les lignes dont les achats sont inférieurs à 50 M€ sont écartées.
 
+`results/figaro_final_demand_emission_factors_26ed.csv` : 17 709 lignes, même structure que la table de
+demande, pondérée par les achats **finals** du pays (consommation des ménages, des administrations et des
+ISBLSM, formation brute de capital fixe ; variations de stocks exclues) au lieu des consommations
+intermédiaires de ses branches. `purchases_meur` désigne alors les achats finals.
+
+`results/figaro_supply_chain_details_26ed.csv` : 18 834 lignes, une par ligne de la table de production,
+2014 à 2023 :
+
+| Colonne | Signification |
+|---|---|
+| `share_own_operations`, `share_tier_1`, `share_tier_2`, `share_tier_3_plus` | décomposition du total par rang de la chaîne d'approvisionnement : la branche elle-même, ses fournisseurs directs, leurs fournisseurs, et au-delà |
+| `total_with_aviation_rf` | total avec le forçage radiatif de l'aviation (CO2 direct du transport aérien x 1,7), optionnel |
+
 `results/figaro_purchaser_price_factors_26ed.csv` : 13 495 lignes, une par année, pays acheteur et
 produit, 2014 à 2023, pour les 26 pays qui publient des matrices de passage (voir Prix d'achat).
 
@@ -84,6 +97,13 @@ Textile, habillement et cuir (C13-15), 2023, kgCO2e par k€ :
 - **Origine de l'achat connue** : table de production, pays du fournisseur (ou du fabricant, pour un
   revendeur).
 - **Origine inconnue** : table de demande, pays de l'entreprise acheteuse.
+- **Achats des entreprises ou achats finals.** La table de demande est pondérée par ce qu'achètent les
+  branches : à utiliser pour les intrants de production et les services. Pour des biens finis ou des
+  équipements achetés en tant que tels (vêtements, véhicules, ordinateurs, mobilier), dont le mix
+  d'origine suit les achats de consommation et d'investissement, la table de demande finale est plus
+  proche. Les deux sont à quelques pourcents l'une de l'autre pour la plupart des produits (ratio médian
+  1,00 pour les biens, 0,99 pour les services en 2023) et s'écartent pour certains biens finis importés :
+  Royaume-Uni, textile, 2023, 391 pondéré par les achats des entreprises, 553 par les achats finals.
 - Le commerce de détail (G47) n'est pas un substitut : au prix de base il ne couvre que la marge
   commerciale (magasins, leur énergie et leur logistique), jamais les biens vendus. Un achat au prix
   d'achat se décompose en valeur des biens au prix de base (facteur du produit), marges de commerce et
@@ -154,7 +174,7 @@ Trois différences expliquent l'essentiel des écarts entre deux facteurs pour l
 
 ## Méthode
 
-`figaro_core.py`, environ 150 lignes :
+`figaro_core.py`, environ 200 lignes :
 
 ```
 x  production par (pays, branche)                  M€
@@ -181,6 +201,25 @@ Les poids sont les achats des entreprises (consommations intermédiaires), pas l
 ménages. Toutes les origines y entrent, y compris les lignes écartées de la table de production.
 `build_factors.py` vérifie que les facteurs de demande multipliés par les achats redonnent les
 émissions contenues dans les achats de chaque pays.
+
+### Achats finals, rangs de la chaîne, aviation
+
+- **Achats finals.** Même formule que le pays de demande, avec les achats finals de s comme poids :
+  consommation des ménages, des administrations et des ISBLSM et formation brute de capital fixe
+  (`P3_S13`, `P3_S14`, `P3_S15`, `P51G`) ; les variations de stocks (`P5M`) sont exclues, les cellules de
+  FBCF négatives (cessions) ramenées à 0. `build_factors.py` vérifie que
+  les facteurs multipliés par les achats finals redonnent les émissions qu'ils contiennent.
+- **Rangs de la chaîne.** `m = f + f A + f A^2 + ...` : émissions propres de la branche (f), de ses
+  fournisseurs directs (f A, qui contient le scope 2), de leurs fournisseurs (f A^2), et le reste. Une ACV
+  de procédés qui s'arrête après quelques rangs manque la dernière couche (37 à 40 % du total en
+  médiane) : la décomposition montre où un facteur entrées-sorties peut la compléter (ACV hybride).
+- **Forçage radiatif de l'aviation.** Désactivé par défaut, comme dans le GHG Protocol et les comptes
+  d'émissions dans l'air. `total_with_aviation_rf` multiplie le CO2 direct du transport aérien (H51) par
+  1,7, la valeur centrale de la
+  [méthodologie 2026 du DESNZ britannique](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting)
+  (paragraphes 2.10 et 8.39 à 8.43, CO2 seul), sur toute la chaîne : `(1,7 - 1) x f_CO2,H51 (I - A)^-1`.
+  Le multiplicateur est indicatif et incertain (même source) : le présenter à part, jamais à la place du
+  total.
 
 ### Prix d'achat
 
@@ -233,6 +272,8 @@ Textile, habillement et cuir (C13-15) acheté en France, 2023, kgCO2e par k€ :
 | Émissions directes de GES et de CO2 par pays et branche | `env_ac_ghgfp`, `env_ac_co2fp` avec `c_dest=WORLD`, `na_item=TOTAL` |
 | Contrôles : empreintes officielles, comptes d'émissions dans l'air, production des comptes nationaux, TES symétrique français | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
 | Prix d'achat : tableaux des emplois au prix d'acquisition et au prix de base, marges de commerce et de transport, impôts nets des subventions, colonne des marges du tableau des ressources | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
+| Vérité terrain : prix de l'électricité, émissions et production des centrales publiques, exportations d'acier | `nrg_pc_205`, `env_air_gge` (CRF 1.A.1.a), `nrg_bal_peh`, Comext `DS-045409` |
+| Vérité terrain : intensité CO2 de l'acier brut, monde | worldsteel, World Steel in Figures [2024](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2024.pdf) et [2025](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2025.pdf) (`data/worldsteel_co2_intensity.csv`) |
 | Contrôle : contenu amont en GES des produits français, tableau GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Les émissions des pays hors UE sont les estimations fondées sur EDGAR produites par Eurostat
@@ -287,6 +328,26 @@ Rapports dans `results/<édition>/validation/`.
    d'achat des biens vaut 0,91 à 0,92 fois le facteur au prix de base en médiane (10 % des lignes sous
    0,79-0,80), 0,98 pour les services ; le rebasage seul donne 0,85-0,86 pour les biens. Couverture par
    année et les deux tests de sensibilité dans le rapport.
+6. **Variantes.** Achats finals par rapport aux achats des entreprises : ratio médian 1,00-1,01 pour les
+   biens (10 % des couples au-dessus de 1,11-1,14), 0,99 pour les services. Rangs de la chaîne en
+   médiane : émissions propres 10-11 %, rang 1 22-24 %, rang 2 21-22 %, rang 3 et au-delà 35-40 %.
+   Forçage radiatif de l'aviation en 2023 : +51 % en médiane sur le transport aérien, +1 % en médiane sur
+   les autres branches (déplacements professionnels), au plus +46 % (agences de voyage).
+7. **Vérité terrain hors du modèle**, rapportée telle que mesurée (le modèle n'y est pas calé) :
+   - **Électricité (D35)** par rapport à intensité du réseau / prix, soit les émissions d'inventaire des
+     centrales publiques d'électricité et de chaleur (CRF 1.A.1.a) par kWh produit, divisées par le prix
+     de l'électricité hors taxes pour les non-ménages, 2021 à 2023 (26 à 27 pays) : le facteur direct vaut
+     0,55 à 0,59 fois cette valeur en médiane, le facteur total 0,97 à 1,15. La production de D35 couvre
+     plus que l'électricité vendue aux entreprises : électricité échangée au sein de la branche, ventes aux ménages à des prix plus élevés, distribution de gaz et
+     vapeur. Un facteur monétaire D35 est donc un mauvais substitut pour une facture d'électricité :
+     utiliser un facteur par kWh.
+   - **Métallurgie (C24)** par rapport à l'intensité CO2 mondiale de l'acier brut de worldsteel (1,91 et
+     1,92 t par t en 2022 et 2023) divisée par la valeur unitaire des exportations d'acier de l'UE (Comext,
+     SH 72 : 1 193 et 1 005 €/t) : le total C24 des 21 pays de l'UE au-dessus de 1 Md€ de production vaut
+     0,58 et 0,46 fois cette valeur en médiane (de 539 à 1 661 kgCO2e/k€). Un écart attendu dans ce sens :
+     C24 couvre aussi les métaux non ferreux et les fonderies, et le chiffre de worldsteel est une moyenne
+     mondiale alors que les filières et les combustibles de la sidérurgie diffèrent selon les pays. Pour
+     de l'acier acheté au poids, un facteur par tonne est préférable.
 
 ### Pourquoi la France est environ 15 % sous la Base Carbone
 
@@ -309,7 +370,8 @@ python build_factors.py --figaro-dir tables   # results/26ed/ (46 régions, non 
 python build_purchaser_prices.py              # results/26ed/figaro_purchaser_prices_26ed.csv
 python validate.py                            # results/26ed/validation/
 python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv,
-                                              # figaro_purchaser_price_factors_26ed.csv
+                                              # figaro_final_demand_emission_factors_26ed.csv,
+                                              # figaro_supply_chain_details_26ed.csv, figaro_purchaser_price_factors_26ed.csv
 ```
 
 Environ 5 minutes et 4 Go de mémoire une fois les tableaux téléchargés. Eurostat écrase ses jeux de

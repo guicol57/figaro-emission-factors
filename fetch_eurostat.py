@@ -19,6 +19,9 @@ import numpy as np
 import pandas as pd
 
 API = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"
+COMEXT = "https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/"
+EU_REPORTERS = ("AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "LT",
+                "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK")
 DATA = Path(__file__).parent / "data"
 
 # intermediate consumption of all industries, and of the industries whose sales are mostly exempt from VAT
@@ -48,6 +51,19 @@ EXTRACTS = {
            ("naio_10_cp1610_basic", "naio_10_cp1610", "prd_ava", "&stk_flow=TOTAL"),
            ("naio_10_cp1620_margins", "naio_10_cp1620", "cpa2_1", ""),
            ("naio_10_cp1630_taxes", "naio_10_cp1630", "cpa2_1", ""))},
+    # ground truth for D35 (validation 7): non-household electricity prices excluding taxes, emissions of
+    # public electricity and heat production in the national inventories, and the output of those plants
+    "nrg_pc_205_non_household": ("nrg_pc_205?siec=E7000&nrg_cons=TOT_KWH&unit=KWH&tax=X_TAX&currency=EUR&sinceTimePeriod=2014-S1",
+                                 ["geo", "time"]),
+    "env_air_gge_public_power": ("env_air_gge?src_crf=CRF1A1A&airpol=GHG&unit=THS_T&sinceTimePeriod=2014", ["geo", "time"]),
+    "nrg_bal_peh_main_activity": ("nrg_bal_peh?siec=TOTAL&sinceTimePeriod=2014&nrg_bal=GEP_MAPE&nrg_bal=GEP_MAPCHP"
+                                  "&nrg_bal=GHP_MAPCHP&nrg_bal=GHP_MAPH", ["geo", "nrg_bal", "unit", "time"]),
+    # ground truth for C24 (validation 7): export unit values of iron and steel (HS 72) and of hot-rolled flat
+    # products (HS 7208), exports to all partners, Comext
+    "comext_steel_exports": (COMEXT + "DS-045409?freq=A&flow=2&partner=WORLD&product=72&product=7208"
+                             "&indicators=VALUE_IN_EUROS&indicators=QUANTITY_IN_100KG&sinceTimePeriod=2014&"
+                             + "&".join(f"reporter={r}" for r in EU_REPORTERS),
+                             ["reporter", "product", "indicators", "time"]),
     # trade and transport margins column of the supply table: which margin services the margins pay for
     "naio_10_cp15_margins_supply": ("naio_10_cp15?unit=MIO_EUR&ind_impv=OTTM&sinceTimePeriod=2014", ["geo", "prd_amo", "time"]),
 }
@@ -67,7 +83,8 @@ TABLES_26ED = {
 
 def fetch(query: str, keep: list[str]) -> tuple[pd.DataFrame, str]:
     sep = "&" if "?" in query else "?"
-    with urllib.request.urlopen(f"{API}{query}{sep}format=JSON&lang=EN") as r:
+    url = query if query.startswith("http") else API + query
+    with urllib.request.urlopen(f"{url}{sep}format=JSON&lang=EN") as r:
         d = json.load(r)
     ids, size = d["id"], d["size"]
     cats = [list(d["dimension"][i]["category"]["index"]) for i in ids]

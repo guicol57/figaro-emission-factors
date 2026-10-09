@@ -47,6 +47,18 @@ product, 2014 to 2023. Same value columns, averaged over every country of origin
 
 Rows with purchases below 50 million EUR are left out.
 
+`results/figaro_final_demand_emission_factors_26ed.csv`: 17,709 rows, same layout as the demand table,
+weighted by the **final** purchases of the country (household, government and NPISH consumption, gross
+fixed capital formation; changes in inventories left out) instead of the intermediate consumption of
+its industries. `purchases_meur` is then final purchases.
+
+`results/figaro_supply_chain_details_26ed.csv`: 18,834 rows, one per row of the supply table, 2014 to 2023:
+
+| Column | Meaning |
+|---|---|
+| `share_own_operations`, `share_tier_1`, `share_tier_2`, `share_tier_3_plus` | split of the total by supply-chain layer: the industry itself, its direct suppliers, their suppliers, and beyond |
+| `total_with_aviation_rf` | total with the radiative forcing of aviation (direct CO2 of air transport x 1.7), optional |
+
 `results/figaro_purchaser_price_factors_26ed.csv`: 13,495 rows, one per year, purchasing country and
 product, 2014 to 2023, for the 26 countries that publish valuation matrices (see Purchaser prices).
 
@@ -84,6 +96,12 @@ Textiles, wearing apparel and leather (C13-15), 2023, kgCO2e per k EUR:
 - **Origin of the purchase known**: supply table, country of the supplier (or of the producer, for a
   reseller).
 - **Origin unknown**: demand table, country of the purchasing company.
+- **Business purchases or final purchases.** The demand table is weighted by what industries buy:
+  use it for production inputs and services. For finished goods or equipment bought as such (clothing,
+  vehicles, computers, furniture), whose origin mix follows consumer and investment purchases, the final
+  demand table is closer. The two are within a few percent for most products (median ratio 1.00 for
+  goods, 0.99 for services in 2023) and diverge for some imported finished goods: United Kingdom,
+  textiles, 2023, 391 weighted by business purchases, 553 by final purchases.
 - Retail trade (G47) is not a substitute: at basic prices it covers the trade margin only (shops,
   their energy and logistics), never the goods sold. A purchase at purchaser prices is the basic value
   of the goods (factor of the product) plus the trade and transport margins (factors of G and H) plus
@@ -149,7 +167,7 @@ Three differences explain most of the gaps between two factors for the "same" pu
 
 ## Method
 
-`figaro_core.py`, about 150 lines:
+`figaro_core.py`, about 200 lines:
 
 ```
 x  total output per (country, industry)            million EUR
@@ -175,6 +193,24 @@ demand(s, p)  = sum over origins r of w(r | s, p) x m(r, p)        same weights 
 The weights are business purchases (intermediate consumption), not household final demand. Every
 origin enters them, including rows left out of the supply table. `build_factors.py` checks that the
 demand factors times the purchases give back the emissions embodied in each country's purchases.
+
+### Final purchases, supply-chain layers, aviation
+
+- **Final purchases.** Same formula as the country of demand with the final purchases of s as weights:
+  consumption of households, government and NPISH and gross fixed capital formation (`P3_S13`,
+  `P3_S14`, `P3_S15`, `P51G`); changes in inventories (`P5M`) are left out, negative GFCF cells
+  (disposals) set to 0. `build_factors.py` checks that the factors times
+  the final purchases give back the emissions embodied in them.
+- **Supply-chain layers.** `m = f + f A + f A^2 + ...`: the industry's own emissions (f), those of its
+  direct suppliers (f A, scope 2 is part of it), of their suppliers (f A^2), and the rest. A process LCA
+  that stops after a few tiers misses the last layer (37 to 40% of the total in median): the split shows
+  where an input-output factor can complete it (hybrid LCA).
+- **Aviation radiative forcing.** Off by default, as in the GHG Protocol and the air emissions accounts.
+  `total_with_aviation_rf` multiplies the direct CO2 of air transport (H51) by 1.7, the central value of the
+  [UK DESNZ 2026 methodology](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting)
+  (paragraphs 2.10 and 8.39 to 8.43, CO2 only), along the whole chain: `(1.7 - 1) x f_CO2,H51 (I - A)^-1`.
+  The multiplier is indicative and uncertain (same source); report it separately, never instead of the
+  total.
 
 ### Purchaser prices
 
@@ -223,6 +259,8 @@ prices, 261 rebased, 295 with margins (valuation matrices of 2022: 71% basic val
 | Direct GHG and CO2 emissions by country and industry | `env_ac_ghgfp`, `env_ac_co2fp` with `c_dest=WORLD`, `na_item=TOTAL` |
 | Checks: official footprints, air emissions accounts, national-accounts output, French symmetric IOT | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
 | Purchaser prices: use tables at purchasers' and basic prices, trade and transport margins, taxes less subsidies, margins column of the supply table | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
+| Ground truth: electricity prices, emissions and output of public power and heat plants, steel exports | `nrg_pc_205`, `env_air_gge` (CRF 1.A.1.a), `nrg_bal_peh`, Comext `DS-045409` |
+| Ground truth: CO2 intensity of crude steel, world | worldsteel, World Steel in Figures [2024](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2024.pdf) and [2025](https://worldsteel.org/wp-content/uploads/World-Steel-in-Figures-2025.pdf) (`data/worldsteel_co2_intensity.csv`) |
 | Check: upstream GHG content of French products, table GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Emissions of non-EU countries are the EDGAR-based estimates produced by Eurostat itself
@@ -273,6 +311,25 @@ Reports in `results/<edition>/validation/`.
    goods is 0.91 to 0.92 times the basic-price factor in median (10% of rows below 0.79-0.80), 0.98 for
    services; the rebasing alone gives 0.85-0.86 for goods. Coverage by year and the two sensitivities are
    in the report.
+6. **Variants.** Final against business purchases: median ratio 1.00-1.01 for goods (10% of pairs above
+   1.11-1.14), 0.99 for services. Supply-chain layers in median: own operations 10-11%, tier 1 22-24%,
+   tier 2 21-22%, tier 3 and beyond 35-40%. Aviation radiative forcing in 2023: +51% in median on air
+   transport, +1% in median on the other industries (business travel), at most +46% (travel agencies).
+7. **Ground truth from outside the model**, reported as measured (the model is not tuned to it):
+   - **Electricity (D35)** against grid intensity / price, i.e. inventory emissions of public power and
+     heat plants (CRF 1.A.1.a) per kWh produced, divided by the non-household electricity price
+     excluding taxes, 2021 to 2023 (26 to 27 countries): the direct factor is 0.55 to 0.59 times that
+     value in median, the total factor 0.97 to 1.15. D35 output covers more than electricity sold to
+     businesses: electricity traded within the industry, sales
+     to households at higher prices, gas distribution and steam. A D35 monetary factor is therefore a
+     poor proxy for an electricity bill: use a factor per kWh.
+   - **Basic metals (C24)** against the worldsteel world CO2 intensity of crude steel (1.91 and 1.92 t
+     per t in 2022 and 2023) divided by the unit value of EU steel exports (Comext, HS 72: 1,193 and
+     1,005 EUR/t): the C24 total of the 21 EU countries above 1 billion EUR of output is 0.58 and 0.46
+     times that value in median (range 539 to 1,661 kgCO2e/kEUR). Expected to be below: C24 also covers
+     non-ferrous metals and foundries, and the worldsteel figure is a world average while the route
+     and fuel mix of steelmaking differ by country. For steel bought by weight, a factor per tonne is
+     better.
 
 ### Why France is about 15% below Base Carbone
 
@@ -295,7 +352,8 @@ python build_factors.py --figaro-dir tables   # results/26ed/ (all 46 regions, n
 python build_purchaser_prices.py              # results/26ed/figaro_purchaser_prices_26ed.csv
 python validate.py                            # results/26ed/validation/
 python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv,
-                                              # figaro_purchaser_price_factors_26ed.csv
+                                              # figaro_final_demand_emission_factors_26ed.csv,
+                                              # figaro_supply_chain_details_26ed.csv, figaro_purchaser_price_factors_26ed.csv
 ```
 
 About 5 minutes and 4 GB of memory once the tables are downloaded. Eurostat overwrites its datasets
