@@ -62,3 +62,46 @@ Ratio = demand factor / supply factor of the same country and product, total sco
 | 2021 | 1841 | 1.040 | 0.93 | 1.45 | 58% | 76% |
 | 2022 | 1855 | 1.043 | 0.93 | 1.43 | 56% | 74% |
 | 2023 | 1857 | 1.050 | 0.95 | 1.45 | 55% | 76% |
+
+## 5. Purchaser prices (business purchases, national use tables)
+
+Coverage of the 31 published countries by year: valuation matrices of the same year / nearest year within 5 years / none.
+
+| year | same year | carried | none | countries without valuation data |
+|---|---|---|---|---|
+| 2014 | 18 | 7 | 6 | BG, CH, DE, ES, GB, TR |
+| 2015 | 25 | 0 | 6 | BG, CH, DE, ES, GB, TR |
+| 2016 | 15 | 10 | 6 | BG, CH, DE, ES, GB, TR |
+| 2017 | 14 | 11 | 6 | BG, CH, DE, ES, GB, TR |
+| 2018 | 15 | 11 | 5 | BG, CH, DE, ES, GB |
+| 2019 | 15 | 11 | 5 | BG, CH, DE, ES, GB |
+| 2020 | 24 | 2 | 5 | BG, CH, DE, ES, GB |
+| 2021 | 17 | 9 | 5 | BG, CH, DE, ES, GB |
+| 2022 | 15 | 11 | 5 | BG, CH, DE, ES, GB |
+| 2023 | 7 | 19 | 5 | BG, CH, DE, ES, GB |
+
+Accounting identity PP = BP + margins + taxes, cells with all four tables published: 8689, 97.1% within 1% (the others are dropped). Margins derived as PP - BP - taxes (margins matrix not published): 2.6% of rows.
+
+Purchaser-price factor of the country of demand vs the basic-price factor, published rows (purchases above 50 MEUR):
+
+| year | n | goods: rebasing ratio, median | goods: with margins / basic, median (p10-p90) | services: with margins / basic, median (p10-p90) |
+|---|---|---|---|---|
+| 2014 | 1327 | 0.857 | 0.917 (0.79-0.98) | 0.982 (0.92-1.00) |
+| 2015 | 1373 | 0.855 | 0.915 (0.80-0.98) | 0.983 (0.92-1.00) |
+| 2016 | 1336 | 0.857 | 0.916 (0.80-0.98) | 0.983 (0.93-1.00) |
+| 2017 | 1368 | 0.858 | 0.917 (0.79-0.98) | 0.983 (0.93-1.00) |
+| 2018 | 1371 | 0.852 | 0.916 (0.79-0.98) | 0.984 (0.92-1.00) |
+| 2019 | 1356 | 0.851 | 0.915 (0.80-0.98) | 0.983 (0.93-1.00) |
+| 2020 | 1367 | 0.847 | 0.911 (0.79-0.97) | 0.983 (0.92-1.00) |
+| 2021 | 1383 | 0.849 | 0.913 (0.79-0.98) | 0.983 (0.92-1.00) |
+| 2022 | 1385 | 0.853 | 0.917 (0.80-0.98) | 0.983 (0.92-1.00) |
+| 2023 | 1384 | 0.852 | 0.914 (0.80-0.98) | 0.984 (0.93-1.00) |
+
+Sensitivity of the factor with margins (published rows, all years):
+
+| variant | n | median change | p10 | p90 | within 2% |
+|---|---|---|---|---|---|
+| margins all priced at wholesale trade (G46) instead of the national mix of margin services | 13650 | +0.0% | -0.7% | +0.1% | 96% |
+| taxes of the industries other than the VAT-exempt ones (K, O, P, Q) | 12790 | +0.4% | -0.0% | +3.1% | 82% |
+
+Non-deductible VAT sits in the taxes: France 2022, taxes on IT services (J62-63) bought by all industries 2.6% of the basic value, by the VAT-exempt ones 14.9% (VAT rate 20%).

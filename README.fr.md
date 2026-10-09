@@ -7,7 +7,7 @@ d'activité, calculés à partir des tableaux entrées-sorties inter-pays FIGARO
 comptes d'émissions qu'Eurostat utilise pour ses empreintes officielles. Scopes 1, 2 et 3 amont, en
 kgCO2e par k€ de production, selon deux vues : le pays de **production** (où les biens ou services
 sont produits) et le pays de **demande** (ce qu'un pays achète réellement, production nationale et
-importations).
+importations), et la vue demande convertie au **prix d'achat** que paient réellement les entreprises.
 
 Ce dépôt contient tout le calcul : scripts, extraits de données, résultats et contrôles. Il est
 maintenu par [Ecodex](https://getecodex.com), qui publie ces facteurs au sein de la source « Eurostat ».
@@ -47,6 +47,19 @@ produit, 2014 à 2023. Mêmes colonnes de valeurs, moyennées sur tous les pays 
 
 Les lignes dont les achats sont inférieurs à 50 M€ sont écartées.
 
+`results/figaro_purchaser_price_factors_26ed.csv` : 13 495 lignes, une par année, pays acheteur et
+produit, 2014 à 2023, pour les 26 pays qui publient des matrices de passage (voir Prix d'achat).
+
+| Colonne | Signification |
+|---|---|
+| `total_purchaser_prices_with_margins` | facteur du pays de demande par k€ au prix d'achat, émissions des marges de commerce et de transport incluses : le facteur à appliquer à un montant facturé hors TVA déductible |
+| `total_purchaser_prices_rebased` | mêmes émissions que le facteur au prix de base, divisées par le prix d'achat (marges sans émissions) |
+| `total_basic_prices` | le facteur de la table de demande |
+| `rebasing_ratio`, `margin_term` | pour convertir n'importe quel facteur du produit au prix de base : `facteur x rebasing_ratio + margin_term` |
+| `share_basic_value`, `share_trade_transport_margins`, `share_taxes_less_subsidies` | décomposition du prix d'achat payé par les branches du pays |
+| `margin_factor`, `margins_transport_share` | facteur des services de marge (mix commerce et transport du pays) et part du transport dans ce mix |
+| `valuation_year`, `purchases_pp_meur` | année des tableaux nationaux utilisés, et achats au prix d'achat cette année-là (M€) |
+
 ## Quand utiliser ces facteurs
 
 Un facteur monétaire est une solution de repli : un facteur physique (par kg, kWh, km) ou une
@@ -73,8 +86,9 @@ Textile, habillement et cuir (C13-15), 2023, kgCO2e par k€ :
 - **Origine inconnue** : table de demande, pays de l'entreprise acheteuse.
 - Le commerce de détail (G47) n'est pas un substitut : au prix de base il ne couvre que la marge
   commerciale (magasins, leur énergie et leur logistique), jamais les biens vendus. Un achat au prix
-  d'achat se décompose en valeur des biens au prix de base (facteur du produit) et marge commerciale
-  (facteur de G47).
+  d'achat se décompose en valeur des biens au prix de base (facteur du produit), marges de commerce et
+  de transport (facteurs de G et H) et taxes : la table au prix d'achat fait cette décomposition pour
+  les achats des entreprises.
 
 Les deux vues sont proches pour les services, achetés surtout localement (2023 : écart médian de
 3 %, deux couples sur trois à 10 % près), et s'écartent pour les biens (écart médian de 11 %, 42 % à
@@ -106,7 +120,7 @@ Telles que disponibles dans Ecodex en octobre 2026.
 
 | Base | Pays | Secteurs | Années | Base de prix | Méthode en une ligne |
 |---|---|---|---|---|---|
-| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2014-2023, annuel (2024 : scopes 1 + 2) | Prix de base | Tableaux inter-pays et comptes d'émissions d'Eurostat |
+| **FIGARO** (ce dépôt) | 31 pays européens | 62 branches | 2014-2023, annuel (2024 : scopes 1 + 2) | Prix de base ; prix d'achat des entreprises dans 26 pays | Tableaux inter-pays et comptes d'émissions d'Eurostat |
 | CEDA (Watershed) | 149 | 400 secteurs | 2021-2024 | Prix d'achat | Modèle mondial, une année de base d'émissions réindexée par année |
 | EXIOBASE v3.8.2 | 48 pays et régions | 184 produits | 2019 | Prix de base | Modèle multirégional mondial, consortium académique |
 | EPA Supply Chain v1.4 | États-Unis | 1 016 produits | USD 2024 | Prix d'achat | Modèle national USEEIO |
@@ -131,8 +145,10 @@ Trois différences expliquent l'essentiel des écarts entre deux facteurs pour l
 - Peu adapté : un produit industriel ou agricole précis (voir le tableau ci-dessus).
 - France : les ratios de la Base Carbone sont environ 15 % plus élevés que ces facteurs, pour une
   raison documentée (voir Contrôles).
-- Un montant TTC ou incluant des marges commerciales surestime les émissions avec des facteurs au
-  prix de base.
+- Un montant facturé est au prix d'achat : avec un facteur au prix de base il surestime les émissions
+  (biens : environ 9 % en médiane, plus de 25 % pour une ligne sur dix). Utiliser la table au prix
+  d'achat, ou `rebasing_ratio` et `margin_term` avec un facteur de production quand l'origine est
+  connue. Un montant incluant la TVA déductible surestime dans tous les cas.
 - Ne pas changer de base d'une année sur l'autre pour une même catégorie de dépenses : le
   changement de base apparaîtrait comme une variation d'émissions.
 
@@ -166,6 +182,49 @@ ménages. Toutes les origines y entrent, y compris les lignes écartées de la t
 `build_factors.py` vérifie que les facteurs de demande multipliés par les achats redonnent les
 émissions contenues dans les achats de chaque pays.
 
+### Prix d'achat
+
+Les facteurs ci-dessus sont par euro au prix de base. Une entreprise paie la valeur du produit au prix
+de base, plus les marges de commerce et de transport de ses distributeurs, plus les impôts nets des
+subventions sur les produits. Eurostat publie, par pays et par année, les tableaux des emplois au prix
+d'acquisition et au prix de base et les deux matrices de passage entre eux, par produit et par
+utilisateur. `build_purchaser_prices.py` les prend sur les consommations intermédiaires de toutes les
+branches, pour un pays acheteur s et un produit p :
+
+```
+PA           = PB + M + T                              tableaux nationaux, achats des entreprises
+FE_M(s)      = somme sur les services de marge k de w_k x m(s, k)
+               w_k = part de k (G45-G47, H49-H53) dans les marges du tableau des ressources de s
+avec marges  = (PB x FE_PB + M x FE_M(s) + T x 0) / PA  = FE_PB x PB / PA + M / PA x FE_M(s)
+rebasé       = FE_PB x PB / PA
+```
+
+FE_PB est le facteur du pays de demande. Achats des entreprises, et non ressources totales : en 2022,
+le textile coûte aux branches françaises qui l'achètent 1,41 fois sa valeur au prix de base, contre
+1,79 fois en moyenne sur tous les emplois, ménages compris (marges du commerce de détail). Même approche
+que les facteurs de l'EPA américaine avec et sans marges.
+
+Textile, habillement et cuir (C13-15) acheté en France, 2023, kgCO2e par k€ : 369 au prix de base,
+261 rebasé, 295 avec marges (matrices de passage 2022 : 71 % valeur au prix de base, 26 % marges, 3 % taxes).
+
+- La matrice des marges donne le total des marges. Leur partage entre services de commerce et de
+  transport est celui du tableau des ressources du pays, le même pour tous les produits (le transport
+  représente 6 % des marges en médiane). Valoriser toutes les marges au facteur du commerce de gros
+  change le résultat de moins de 2 % pour 96 % des lignes (contrôle 5).
+- Les taxes ne portent pas d'émissions. Elles comprennent la TVA non déductible : en France en 2022,
+  les branches exonérées de TVA (finance, assurance, administration, enseignement, santé) paient des
+  taxes de 15 % de la valeur au prix de base sur les services informatiques qu'elles achètent, contre
+  2,6 % pour l'ensemble des branches. La table fait la moyenne de toutes les branches : elle sous-estime
+  légèrement le facteur pour un acheteur qui déduit toute sa TVA (+0,4 % en médiane, +3 % au p90, hors
+  branches exonérées).
+- Les matrices de passage ne sont obligatoires que tous les 5 ans : une année sans elles prend l'année
+  la plus proche du même pays, à 5 ans au plus (`valuation_year`, 66 % des lignes utilisent la même
+  année). L'Allemagne, l'Espagne, la Bulgarie, la Suisse et le Royaume-Uni n'en publient pas (ou pas les
+  marges et les taxes) : pas de lignes.
+- Les services de marge achetés en tant que tels (commissions de gros, fret) ne portent pas de marge
+  propre. Quand la matrice des marges manque mais que les trois autres tableaux sont publiés, marges =
+  PA - PB - taxes ; les cellules où les quatre tableaux divergent de plus de 1 % sont écartées.
+
 ### Données d'entrée
 
 | Donnée | Source Eurostat |
@@ -173,6 +232,7 @@ ménages. Toutes les origines y entrent, y compris les lignes écartées de la t
 | Tableau entrées-sorties inter-pays, branche par branche, 64 branches x 50 régions, édition 2026 | FIGARO, [espace public CIRCABC](https://ec.europa.eu/eurostat/web/esa-supply-use-input-tables/database) (48 Mo par année, téléchargé par `fetch_eurostat.py --tables`) |
 | Émissions directes de GES et de CO2 par pays et branche | `env_ac_ghgfp`, `env_ac_co2fp` avec `c_dest=WORLD`, `na_item=TOTAL` |
 | Contrôles : empreintes officielles, comptes d'émissions dans l'air, production des comptes nationaux, TES symétrique français | `env_ac_ghgfp`, `env_ac_ainah_r2`, `nama_10_a64`, `naio_10_cp1700` |
+| Prix d'achat : tableaux des emplois au prix d'acquisition et au prix de base, marges de commerce et de transport, impôts nets des subventions, colonne des marges du tableau des ressources | `naio_10_cp16`, `naio_10_cp1610`, `naio_10_cp1620`, `naio_10_cp1630`, `naio_10_cp15` |
 | Contrôle : contenu amont en GES des produits français, tableau GES.501 | [SDES / Insee](https://www.statistiques.developpement-durable.gouv.fr/emissions-de-gaz-effet-de-serre-et-empreinte-carbone-de-la-france-une-baisse-significative-en-2023) |
 
 Les émissions des pays hors UE sont les estimations fondées sur EDGAR produites par Eurostat
@@ -222,6 +282,11 @@ Rapports dans `results/<édition>/validation/`.
 4. **Pays de demande.** Par rapport au facteur de production du même pays et du même produit : ratio
    médian de 1,04 à 1,05 selon l'année, 10 % des couples sous 0,93-0,95, 10 % au-dessus de
    1,37-1,45. Les plus forts pour les biens importés (textile 1,39, industries extractives 1,59 en 2023).
+5. **Prix d'achat.** Valeur au prix de base + marges + taxes = prix d'achat pour 97,1 % des cellules
+   où les quatre tableaux sont publiés (les autres sont écartées). Avec marges, le facteur au prix
+   d'achat des biens vaut 0,91 à 0,92 fois le facteur au prix de base en médiane (10 % des lignes sous
+   0,79-0,80), 0,98 pour les services ; le rebasage seul donne 0,85-0,86 pour les biens. Couverture par
+   année et les deux tests de sensibilité dans le rapport.
 
 ### Pourquoi la France est environ 15 % sous la Base Carbone
 
@@ -241,8 +306,10 @@ La comparaison avec CEDA et EXIOBASE est dans [docs/comparison-ceda-exiobase.md]
 pip install -r requirements.txt
 python fetch_eurostat.py --tables tables      # extraits Eurostat dans data/, tableaux FIGARO dans tables/
 python build_factors.py --figaro-dir tables   # results/26ed/ (46 régions, non versionné)
+python build_purchaser_prices.py              # results/26ed/figaro_purchaser_prices_26ed.csv
 python validate.py                            # results/26ed/validation/
-python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv
+python build_results.py                       # results/figaro_emission_factors_26ed.csv, figaro_demand_emission_factors_26ed.csv,
+                                              # figaro_purchaser_price_factors_26ed.csv
 ```
 
 Environ 5 minutes et 4 Go de mémoire une fois les tableaux téléchargés. Eurostat écrase ses jeux de
@@ -260,6 +327,10 @@ extraits versionnés dans `data/` sont ceux des résultats publiés.
   importés par les branches françaises (voir plus haut) ; les facteurs de demande français des biens
   sont donc probablement un peu bas. Le reste du monde forme un seul bloc, avec un facteur par
   branche. Le mix d'achat d'une entreprise donnée peut s'écarter de la moyenne de son pays.
+- Prix d'achat : moyennes nationales sur toutes les branches acheteuses, même partage des marges entre
+  commerce et transport pour tous les produits, année la plus proche quand les matrices de passage ne
+  sont pas annuelles. Les services de marge sont valorisés aux facteurs du pays acheteur (ils y sont
+  produits).
 
 ## Licence et attribution
 

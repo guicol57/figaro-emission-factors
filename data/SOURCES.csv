@@ -6,3 +6,8 @@ env_ac_ainah_r2_ghg.csv,env_ac_ainah_r2?airpol=GHG&unit=THS_T&sinceTimePeriod=20
 env_ac_ainah_r2_co2.csv,env_ac_ainah_r2?airpol=CO2&unit=THS_T&sinceTimePeriod=2023,2026-08-07T23:00:00+0200,5266
 nama_10_a64_p1.csv,nama_10_a64?na_item=P1&unit=CP_MEUR&sinceTimePeriod=2014,2026-10-02T23:00:00+0200,39876
 naio_10_cp1700_FR.csv,naio_10_cp1700?geo=FR&unit=MIO_EUR&sinceTimePeriod=2014,2026-09-30T23:00:00+0200,187865
+naio_10_cp16_purchasers.csv,naio_10_cp16?unit=MIO_EUR&sinceTimePeriod=2014&ind_use=TOTAL&ind_use=K64&ind_use=K65&ind_use=K66&ind_use=O&ind_use=P&ind_use=Q86&ind_use=Q87_88,2026-10-08T23:00:00+0200,195411
+naio_10_cp1610_basic.csv,naio_10_cp1610?unit=MIO_EUR&stk_flow=TOTAL&sinceTimePeriod=2014&ind_use=TOTAL&ind_use=K64&ind_use=K65&ind_use=K66&ind_use=O&ind_use=P&ind_use=Q86&ind_use=Q87_88,2026-10-08T23:00:00+0200,141192
+naio_10_cp1620_margins.csv,naio_10_cp1620?unit=MIO_EUR&sinceTimePeriod=2014&ind_use=TOTAL&ind_use=K64&ind_use=K65&ind_use=K66&ind_use=O&ind_use=P&ind_use=Q86&ind_use=Q87_88,2026-10-08T23:00:00+0200,98938
+naio_10_cp1630_taxes.csv,naio_10_cp1630?unit=MIO_EUR&sinceTimePeriod=2014&ind_use=TOTAL&ind_use=K64&ind_use=K65&ind_use=K66&ind_use=O&ind_use=P&ind_use=Q86&ind_use=Q87_88,2026-10-08T23:00:00+0200,103861
+naio_10_cp15_margins_supply.csv,naio_10_cp15?unit=MIO_EUR&ind_impv=OTTM&sinceTimePeriod=2014,2026-10-08T23:00:00+0200,23001
