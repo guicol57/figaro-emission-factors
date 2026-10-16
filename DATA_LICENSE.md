@@ -54,6 +54,12 @@ The results are computed by Ecodex. They are not produced, endorsed or verified 
   datasets, source Eurostat, reused under the Eurostat reuse policy
   (https://ec.europa.eu/eurostat/help/copyright-notice, CC BY 4.0). Dataset codes, queries and
   update dates are listed in `data/SOURCES.csv`. Extracts are reformatted to CSV, values unchanged.
+  Exception: the rows of `data/env_ac_ghgfp_*` and `data/env_ac_co2fp_*` for countries other than
+  the EU Member States, the EFTA countries and the candidate countries (and the same rows in
+  `results/*/validation/1_footprints_*.csv`) are data that the Eurostat notice reserves for
+  non-commercial reuse. They are kept so the results can be reproduced and checked, are not covered
+  by the licence of this repository, and must be removed before any commercial reuse. See
+  `docs/non-eu-countries.md`.
 - FIGARO inter-country input-output tables: source Eurostat, same policy. They are downloaded by
   `fetch_eurostat.py` and not redistributed here.
 - `data/sdes_t_ghg_501_contenu_amont_produits.xlsx`: table GES.501, source SDES / Insee, "Emissions
