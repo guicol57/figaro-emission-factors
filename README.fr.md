@@ -34,7 +34,9 @@ euros courants de l'année, principe de résidence, consommations intermédiaire
 (immobilisations exclues), PRG des comptes d'émissions dans l'air européens (CH4 = 28, N2O = 265).
 
 Pays : UE27, Norvège, Suisse, Royaume-Uni, Turquie. Les branches T et U et les lignes dont la
-production est inférieure à 50 M€ sont écartées.
+production est inférieure à 50 M€ sont écartées. Le modèle calcule aussi les autres pays de FIGARO
+(Chine, États-Unis, Inde...), qui ne sont pas publiés en raison de la licence des données d'entrée :
+voir [docs/non-eu-countries.md](docs/non-eu-countries.md) (en anglais), avec une comparaison à CEDA.
 
 `results/figaro_demand_emission_factors_26ed.csv` : 18 465 lignes, une par année, pays acheteur et
 produit, 2014 à 2023. Mêmes colonnes de valeurs, moyennées sur tous les pays d'origine, plus :
@@ -91,8 +93,11 @@ Textile, habillement et cuir (C13-15), 2023, kgCO2e par k€ :
 |---|---|---|
 | France, pays de production | 205 | fabriqué en France |
 | France, pays de demande | 369 | 36 % acheté en France, 30 % dans le reste de l'UE, 34 % hors UE |
-| Chine, pays de production | 724 | |
-| Inde, pays de production | 1 347 | |
+| Italie, pays de production | 260 | |
+| Turquie, pays de production | 561 | |
+
+79 % des émissions du facteur de demande français ont lieu hors UE, contre 54 % pour le facteur de
+production français.
 
 - **Origine de l'achat connue** : table de production, pays du fournisseur (ou du fabricant, pour un
   revendeur).

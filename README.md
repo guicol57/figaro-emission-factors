@@ -34,7 +34,9 @@ the year, residence principle, intermediate consumption only (capital goods excl
 European air emissions accounts (CH4 = 28, N2O = 265).
 
 Countries: EU27, Norway, Switzerland, United Kingdom, Turkey. Industries T and U and rows with an
-output below 50 million EUR are left out.
+output below 50 million EUR are left out. The model also computes the other FIGARO countries (China,
+United States, India...), which are not published because of the licence of the inputs: see
+[docs/non-eu-countries.md](docs/non-eu-countries.md), with a comparison against CEDA.
 
 `results/figaro_demand_emission_factors_26ed.csv`: 18,465 rows, one per year, purchasing country and
 product, 2014 to 2023. Same value columns, averaged over every country of origin, plus:
@@ -90,8 +92,11 @@ Textiles, wearing apparel and leather (C13-15), 2023, kgCO2e per k EUR:
 |---|---|---|
 | France as country of supply | 205 | made in France |
 | France as country of demand | 369 | 36% bought in France, 30% in the rest of the EU, 34% outside the EU |
-| China as country of supply | 724 | |
-| India as country of supply | 1,347 | |
+| Italy as country of supply | 260 | |
+| Turkey as country of supply | 561 | |
+
+79% of the emissions behind the French demand factor occur outside the EU, against 54% for the
+French supply factor.
 
 - **Origin of the purchase known**: supply table, country of the supplier (or of the producer, for a
   reseller).
